@@ -1,0 +1,20 @@
+version: '3.7'
+
+services:
+  api:
+    build:
+      context: api
+    restart: unless-stopped
+  postgres:
+    build:
+      context: postgres
+    restart: unless-stopped
+  client:
+    build:
+      context: client
+  nginx:
+    build:
+      context: nginx
+    ports:
+      - 80:80
+      - 443:443
