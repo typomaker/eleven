@@ -35,12 +35,12 @@ create table card.entity
     popularity numeric(6,6) default 0 not null ,
     rarity numeric(6,6) default 0 not null 
 );
-create table card.relation 
+create table card.binder 
 (
     uuid uuid primary key  not null default uuid_generate_v4(),
-    parent uuid references card.entity(uuid) not null,
-    child uuid references card.entity(uuid) not null,
-    next uuid references card.entity(uuid) default null
+    entity uuid references card.entity(uuid) not null,
+    input uuid references card.entity(uuid) not null,
+    output uuid references card.entity(uuid) default null
 );
 
 create schema deck;

@@ -6,7 +6,7 @@ import { Facebook as FacebookIcon } from 'mdi-material-ui'
 const useStyles = makeStyles((theme: Theme) => createStyles({
     button: {
         backgroundColor: '#3C5A99',
-        margin: theme.spacing(1),
+        marginTop: theme.spacing(1),
         "&:hover": {
             backgroundColor: "#3C5A99"
         }
