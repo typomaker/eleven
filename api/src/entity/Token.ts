@@ -4,10 +4,10 @@ import uuid from 'uuid/v4';
 class Token  {
     created: Date;
     expired: Date | null;
-    uuid: string;
+    id: string;
 
     constructor(p: Token.Configuration) {
-        this.uuid = p.uuid || uuid();
+        this.id = p.id || uuid();
         this.created = p.created || new Date;
         this.expired = p.expired || null;
     }

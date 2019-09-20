@@ -5,7 +5,7 @@ import Cache from 'node-cache'
 import bcrypt from 'bcrypt';
 
 class Account {
-    uuid: string;
+    id: string;
     created: Date;
     deleted: Date | null;
     name: string;
@@ -15,7 +15,7 @@ class Account {
     tokens: Account.Token.List;
 
     constructor(p: Account.Configuration) {
-        this.uuid = p.uuid || uuid();
+        this.id = p.id || uuid();
         this.created = p.created || new Date;
         this.deleted = p.deleted || null;
         this.name = p.name || '';
@@ -86,7 +86,7 @@ namespace Account {
         }
     }
     export class Email {
-        readonly uuid: string;
+        readonly id: string;
         readonly created: Date;
         address: Email.Address;
 
@@ -94,7 +94,7 @@ namespace Account {
             if (!Email.Address.is(p.address)) {
                 throw new Error(`Invalid argument. Address '${p.address}' is not valid.`);
             }
-            this.uuid = p.uuid || uuid();
+            this.id = p.id || uuid();
             this.address = p.address;
             this.created = p.created || new Date;
         }
@@ -119,7 +119,7 @@ namespace Account {
         }
     }
     export class Token {
-        uuid: string;
+        id: string;
         created: Date;
         updated: Date;
         deleted: Date | null;
@@ -127,7 +127,7 @@ namespace Account {
 
         constructor(p?: Token.Configuration) {
             if (p) {
-                this.uuid = p.uuid || uuid();
+                this.id = p.id || uuid();
                 this.created = p.created || new Date;
                 this.updated = p.updated || new Date;
                 this.deleted = p.deleted || null;
@@ -149,18 +149,18 @@ namespace Account {
                 await pg.query(
                     `
                     INSERT INTO account.user 
-                    (uuid, created, name, avatar, deleted) 
+                    (id, created, name, avatar, deleted) 
                     VALUES 
                     ${
                     accounts.map((v) => `(
-                                ${pg.escapeLiteral(v.uuid)},
+                                ${pg.escapeLiteral(v.id)},
                                 ${pg.escapeLiteral(v.created.toISOString())},
                                 ${pg.escapeLiteral(v.name)},
                                 ${v.avatar ? pg.escapeLiteral(v.avatar) : null},
                                 ${v.deleted ? pg.escapeLiteral(v.deleted.toISOString()) : null}
                         )`).join(',')
                     }
-                    ON CONFLICT(uuid) 
+                    ON CONFLICT(id) 
                     DO UPDATE SET 
                         name=EXCLUDED.name, 
                         avatar=EXCLUDED.avatar, 
@@ -174,8 +174,8 @@ namespace Account {
                     for (const v of account.emails) {
                         emails.push(
                             `(
-                                ${pg.escapeLiteral(v.uuid)},
-                                ${pg.escapeLiteral(account.uuid)},
+                                ${pg.escapeLiteral(v.id)},
+                                ${pg.escapeLiteral(account.id)},
                                 ${pg.escapeLiteral(v.address)},
                                 ${pg.escapeLiteral(v.created.toISOString())}
                             )`
@@ -184,7 +184,7 @@ namespace Account {
                     for (const v of account.signs) {
                         signs.push(
                             `(
-                                ${pg.escapeLiteral(account.uuid)},
+                                ${pg.escapeLiteral(account.id)},
                                 ${pg.escapeLiteral(v.id.method)},
                                 ${pg.escapeLiteral(v.id.key)},
                                 ${pg.escapeLiteral(v.created.toISOString())}
@@ -194,8 +194,8 @@ namespace Account {
                     for (const v of account.tokens) {
                         tokens.push(
                             `(
-                                ${pg.escapeLiteral(account.uuid)},
-                                ${pg.escapeLiteral(v.uuid)},
+                                ${pg.escapeLiteral(account.id)},
+                                ${pg.escapeLiteral(v.id)},
                                 ${pg.escapeLiteral(v.created.toISOString())},
                                 ${pg.escapeLiteral(v.updated.toISOString())},
                                 ${v.deleted ? pg.escapeLiteral(v.deleted.toISOString()) : 'null'},
@@ -207,10 +207,10 @@ namespace Account {
 
                 await pg.query(
                     `
-                    INSERT INTO account.email (uuid,owner,address,created)
+                    INSERT INTO account.email (id,owner,address,created)
                     VALUES
                     ${emails.join(',')}
-                    ON CONFLICT(uuid)
+                    ON CONFLICT(id)
                     DO UPDATE SET
                         address = EXCLUDED.address
                         WHERE account.email.owner=EXCLUDED.owner
@@ -227,10 +227,10 @@ namespace Account {
                 );
                 await pg.query(
                     `
-                    INSERT INTO account.token (uuid,created,updated,deleted,ip)
+                    INSERT INTO account.token (id,created,updated,deleted,ip)
                     VALUES
                     ${tokens.join(',')}
-                    ON CONFLICT(uuid)
+                    ON CONFLICT(id)
                     DO UPDATE SET 
                         updated = EXCLUDED.updated,
                         deleted = EXCLUDED.deleted
@@ -241,12 +241,12 @@ namespace Account {
 
             public find() {
                 return new class Finder {
-                    private _uuid: Array<Account['uuid']> = [];
+                    private _id: Array<Account['id']> = [];
                     private _email: Array<Account.Email['address']> = [];
                     private _sign: Array<Account.Sign['id']> = [];
 
-                    public uuid(...v: Array<Account['uuid']>): this {
-                        this._uuid = v;
+                    public id(...v: Array<Account['id']>): this {
+                        this._id = v;
                         return this;
                     }
 
@@ -263,18 +263,18 @@ namespace Account {
                         let sql = ['SELECT * FROM account.user'];
                         {
                             let where = [];
-                            if (this.uuid && this._uuid.length > 0) {
-                                const ph = this._uuid
+                            if (this.id && this._id.length > 0) {
+                                const ph = this._id
                                     .map(v => pg.escapeLiteral(v))
                                     .join(',');
-                                where.push(`account.user.uuid IN (${ph})`);
+                                where.push(`account.user.id IN (${ph})`);
                             }
                             if (this._email.length > 0) {
                                 const ph = this._email
                                     .map(v => pg.escapeLiteral(v))
                                     .join(',');
                                 where.push(
-                                    `account.user.uuid IN (
+                                    `account.user.id IN (
                                 SELECT account.email.owner 
                                 FROM account.email 
                                 WHERE account.email.address IN (${ph})
@@ -286,7 +286,7 @@ namespace Account {
                                     .map((v) => `(${pg.escapeLiteral(v.method)},${pg.escapeLiteral(v.key)})`)
                                     .join(',');
                                 where.push(
-                                    `account.user.uuid IN(
+                                    `account.user.id IN(
                                 SELECT account.sign.owner 
                                 FROM account.sign 
                                 WHERE (account.sign.method, account.sign.key) IN (${ph})
@@ -303,7 +303,7 @@ namespace Account {
                             return new Account.List;
                         }
                         const ph = result.rows
-                            .map(v => pg.escapeLiteral(v.uuid))
+                            .map(v => pg.escapeLiteral(v.id))
                             .join(',');
                         let emails: Map<number, Account.Email.List> = new Map();
                         let signs: Map<number, Account.Sign.List> = new Map();
@@ -312,7 +312,7 @@ namespace Account {
                             const result = await pg.query(`SELECT * FROM account.email WHERE account.email.owner IN (${ph}) ORDER BY account.email.created`);
                             for (const row of result.rows) {
                                 const email = new Account.Email({
-                                    uuid: row.uuid,
+                                    id: row.id,
                                     address: row.address,
                                     created: new Date(row.created),
                                 });
@@ -345,7 +345,7 @@ namespace Account {
                                     created: new Date(row.created),
                                     updated: new Date(row.updated),
                                     ip: row.ip || null,
-                                    uuid: row.uuid,
+                                    id: row.id,
                                 });
                                 if (tokens.has(row.owner)) {
                                     tokens.get(row.owner)!.push(token);
@@ -357,12 +357,12 @@ namespace Account {
                         return new Account.List(...result.rows.map(row => new Account({
                             avatar: row.avatar,
                             name: row.name,
-                            uuid: row.uuid,
+                            id: row.id,
                             deleted: row.deleted ? new Date(row.deleted) : null,
                             created: new Date(row.created),
-                            emails: emails.get(row.uuid),
-                            signs: signs.get(row.uuid),
-                            tokens: tokens.get(row.uuid),
+                            emails: emails.get(row.id),
+                            signs: signs.get(row.id),
+                            tokens: tokens.get(row.id),
                         })));
                     }
                 }

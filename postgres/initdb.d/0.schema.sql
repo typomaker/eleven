@@ -37,10 +37,10 @@ create table card.instance
 );
 create table card.binder 
 (
-    parent uuid references card.instance(id) not null,
-    child uuid references card.instance(id) not null,
+    card uuid references card.instance(id) not null,
+    target uuid references card.instance(id) not null,
     next uuid references card.instance(id) default null,
-    primary key(parent, child, next)
+    primary key(card, target, next)
 );
 
 create schema deck;
@@ -115,7 +115,8 @@ create table account.card
     id uuid primary key not null default uuid_generate_v4(),
     instance uuid not null references card.instance(id)  on delete cascade on update cascade,
     owner uuid not null references account.user(id) on delete cascade on update cascade,
-    created timestamp with time zone not null default current_timestamp
+    created timestamp with time zone not null default current_timestamp,
+    quantity int not null default 1 check (quantity >= 1)
 );
 create table account.deck
 (

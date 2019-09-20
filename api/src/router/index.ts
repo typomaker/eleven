@@ -1,6 +1,6 @@
 import Router from 'koa-router';
-import token from './token';
+import v1 from './v1';
 
 const router = new Router();
 export default router;
-router.use('/token', token.routes(), token.allowedMethods());
+router.use('/v1', v1.routes(), v1.allowedMethods());

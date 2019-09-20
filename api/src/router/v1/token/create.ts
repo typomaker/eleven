@@ -1,19 +1,13 @@
 import Koa from "koa";
-import { Account } from "../entity";
+import { Account } from "../../../entity";
 import axios from 'axios';
 import pg from 'pg';
 import Recaptcha2 from 'recaptcha2';
 import bcrypt from 'bcrypt';
-import Router from 'koa-router';
-
-const router = new Router<{}, create.Context>({ strict: true, sensitive: true });
-export default router;
-
-router.post('/', create);
 
 async function create<CustomT extends create.Context>(ctx: Koa.ParameterizedContext<{}, CustomT>) {
-    const input: create.Payload = ctx.request.body;
-    switch (input.type) {
+    const payload: create.Payload = ctx.request.body;
+    switch (payload.type) {
         case "internal":
             await create.internal(ctx);
             return;
@@ -25,20 +19,16 @@ async function create<CustomT extends create.Context>(ctx: Koa.ParameterizedCont
     }
 }
 namespace create {
-    enum Code {
-        Invalid = 1,
-        Key = 2,
-    }
-    export type Context = internal.Context;
+    export type Context = facebook.Context & internal.Context;
     export type Payload = facebook.Payload | internal.Payload;
     export type Result = {
         value: string,
     }
 
-    export async function internal<CustomT extends (internal.Context)>(ctx: Koa.ParameterizedContext<{}, CustomT>) {
+    export async function internal<CustomT extends internal.Context>(ctx: Koa.ParameterizedContext<{}, CustomT>) {
         const payload: internal.Payload = ctx.request.body;
         if (!internal.Payload.is(payload) || !ctx.recaptcha2.validate(payload.token)) {
-            ctx.throw(400, { code: Code.Invalid });
+            ctx.throw(400);
         }
         const conn = await ctx.postgres.connect();
         try {
@@ -55,7 +45,7 @@ namespace create {
                         new Account.Sign({
                             id: {
                                 method: 'internal',
-                                key: bcrypt.hashSync(payload.password, 90),
+                                key: bcrypt.hashSync(payload.password, 21),
                             }
                         })
                     )
@@ -63,7 +53,7 @@ namespace create {
             } else {
                 const sign = user.signs.filter('internal')[0] || null;
                 if (!sign || !bcrypt.compareSync(payload.password, sign.id.key)) {
-                    throw { status: 400, code: Code.Key };
+                    throw { status: 400 };
                 }
             }
 
@@ -73,7 +63,7 @@ namespace create {
 
             await conn.query('COMMIT');
             ctx.body = <Result>{
-                value: token.uuid,
+                value: token.id,
             }
         } catch (e) {
             await conn.query('ROLLBACK');
@@ -108,7 +98,7 @@ namespace create {
     export async function facebook<CustomT extends (facebook.Context)>(ctx: Koa.ParameterizedContext<{}, CustomT>) {
         const request: facebook.Payload = ctx.request.body;
         if (!facebook.Payload.is(request)) {
-            ctx.throw(400, { code: Code.Key });
+            ctx.throw(400);
             return;
         }
         const fb = {
@@ -132,6 +122,7 @@ namespace create {
         const conn = await ctx.postgres.connect();
 
         const id: Account.Sign.Id = { method: 'facebook', key: fb.id };
+        
         try {
             await conn.query('BEGIN');
             let user = (await Account.storage(conn).find().sign(id).read()).first()
@@ -156,7 +147,7 @@ namespace create {
             await Account.storage(conn).save(user);
             await conn.query('COMMIT');
             ctx.body = <Result>{
-                value: token.uuid,
+                value: token.id,
             };
         } catch (e) {
             await conn.query('ROLLBACK');
@@ -180,3 +171,4 @@ namespace create {
         }
     }
 }
+export default create;

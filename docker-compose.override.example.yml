@@ -6,6 +6,8 @@ services:
       - ./api:/api
     env_file:
       - .env
+    ports:
+      - 9229:9229
   client:
     volumes:
       - ./client:/client
@@ -23,4 +25,6 @@ services:
     env_file:
       - .env
     volumes:
-      - ./nginx/ssl:/ssl
+      - ./nginx/ssl:/ssl:rw
+      - ./nginx/conf.d/:/conf.d/:ro
+      - ./nginx/entrypoint.sh:/entrypoint.sh:ro

@@ -34,10 +34,9 @@ app.use(async (ctx, next) => {
     try {
         await next();
     } catch (err) {
-        ctx.status = err.status || 500;
-        const body = Object.assign({}, err);
-        delete body.message;
-        if (ctx.status < 500) ctx.body = body;
+        if (ctx.status < 500) ctx.body = {
+            error: '',
+        };
         ctx.app.emit('error', err, ctx);
     }
 });
