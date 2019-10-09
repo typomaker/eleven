@@ -3,8 +3,7 @@ import json from 'koa-json';
 import koaBody from "koa-body";
 import cors from 'koa2-cors';
 import { Pool } from "pg";
-import router from "./router";
-
+import router from "./router/v1";
 import Recaptcha2 from 'recaptcha2';
 
 type Context = {
@@ -34,14 +33,17 @@ app.use(async (ctx, next) => {
     try {
         await next();
     } catch (err) {
-        if (ctx.status < 500) ctx.body = {
-            error: '',
+        ctx.status = err.status || 500;
+        ctx.body = {
+            status: ctx.status,
+            message: err.message || null,
+            date: new Date(),
         };
         ctx.app.emit('error', err, ctx);
     }
 });
 app.on('error', (err, ctx) => {
-    console.error(err, "\n context: ", JSON.stringify(ctx));
+    console.error(err, " ctx: ", JSON.stringify(ctx, undefined, 0));
 });
 app.use(json());
 app.use(koaBody());

@@ -28,13 +28,12 @@ module.exports = {
         }),
         new webpack.EnvironmentPlugin({
             NODE_ENV: process.env.NODE_ENV,
-            DOMAIN_API: process.env.DOMAIN_API,
+            DOMAIN: process.env.DOMAIN,
             FACEBOOK_ID: process.env.FACEBOOK_ID,
-            VK_ID: process.env.VK_ID,
         }),
     ],
     devServer: {
-        public: process.env.DOMAIN_CLIENT,
+        public: process.env.DOMAIN,
         contentBase: path.join(__dirname, 'dist'),
         compress: true,
         port: 80,

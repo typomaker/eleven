@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 set -eo pipefail
 
-echo "DOMAIN_CLIENT=${DOMAIN_CLIENT}";
-echo "DOMAIN_API=${DOMAIN_API}";
+echo "DOMAIN=${DOMAIN}";
 
 if [[ "$ENV" == "development" ]]; then
     if [[ ! -d /ssl/certs ]]; then
@@ -26,13 +25,13 @@ if [[ "$ENV" == "development" ]]; then
         -config <(echo '[req]'; \
         echo 'distinguished_name=req'; \
         echo '[san]'; \
-        echo "subjectAltName=DNS:${DOMAIN_CLIENT},DNS:${DOMAIN_API}" \
+        echo "subjectAltName=DNS:${DOMAIN},DNS:api.${DOMAIN}" \
         ) \
-        -subj "/CN=${DOMAIN_CLIENT}"
+        -subj "/CN=${DOMAIN}"
 fi
 
 for f in $(find /conf.d/ -regex '.*\.conf'); do
-    envsubst '${DOMAIN_API}${DOMAIN_CLIENT}' < ${f} > "/etc/nginx/conf.d/$(basename $f)";
+    envsubst '${DOMAIN}' < ${f} > "/etc/nginx/conf.d/$(basename $f)";
     cat /etc/nginx/conf.d/$(basename $f);
     echo
     done

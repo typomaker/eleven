@@ -1,49 +1,60 @@
-export interface Profile {
-    name: string
-    email?: string
-    avatar?: string
-    user: User
-}
-export interface Session {
-    uuid: string
-    expiredAt: string
-    profile?: Profile
-}
-export interface User {
-    uuid: string
-    name: string
-}
-export class Api {
-    authorization?: string;
-    readonly session = Object.freeze({
-        async get() {
+import * as entity from './../entity';
+import queryString from 'query-string'
+class Api {
+    constructor(
+        private host: string, private authorization?: string
+    ) {
 
-        },
-        async create(data: {
-            email: Required<Profile['email']>;
-            password: string;
-            recaptcha: string;
-        }): Promise<Session> {
-            const response = await fetch(`${this.host}/session`, { method: 'POST', headers: this.headers, body: JSON.stringify(data) });
-            return await response.json();
-        }
-    })
-
-
-    constructor(readonly host: string) {
     }
 
-    private get headers() {
-        const headers = new Headers({
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
+    async autentificate(q: {
+        type: 'facebook';
+        token: string;
+    } | {
+        type: 'internal';
+        email: string;
+        password: string;
+        token: string;
+    }) {
+        const response = await fetch(`${this.host}/v1/token`, {
+            method: 'POST',
+            body: JSON.stringify(q),
         });
+        await Api.assert(response);
+        const json = await response.json();
+        const token = new entity.Token(json);
+        this.authorization = token.value;
 
-        if (this.authorization) {
-            headers.set('Authorization', `Bearer: ${this.authorization}`)
-        }
+        return token;
+    }
 
-        return headers;
+    get account() {
+        return new Api.Account();
     }
 }
+namespace Api {
+    export async function assert(r: Response): Promise<void> {
+        if (r.ok) {
+            return
+        }
+        if (r.headers.get('Content-Type') === 'application/json') {
+            const json = await r.json()
+            throw new Api.Error(r.status, json.code, new Date(json.date));
+        }
+        throw r;
+    }
+    export type Token = {
+        value: string
+    }
+    export class Error {
+        constructor(
+            readonly status: number,
+            readonly code: number,
+            readonly date: Date
+        ) { }
+    }
+    export class Account {
 
+    }
+}
+export default Api

@@ -21,26 +21,22 @@ create schema card;
 create table card.class 
 (
     id varchar(128) primary key  not null,
-    name varchar(256) not null references localization.word(name) on delete restrict on update cascade
+    name varchar(256) default null references localization.word(name) on delete restrict on update cascade
 );
 create table card.instance 
 (
     id uuid primary key  not null default uuid_generate_v4(),
-    created timestamp with time zone not null default current_timestamp,
-    class varchar(128) default null references card.class(id) on delete restrict on update cascade,
-    parent uuid default null references card.instance(id) on delete restrict on update cascade,
     name varchar(256) not null references localization.word(name) on delete restrict on update cascade,
-    description varchar(256) default null references localization.word(name) on delete restrict on update cascade,
-    image text default null,
-    popularity numeric(6,6) default 0 not null ,
-    rarity numeric(6,6) default 0 not null 
+    class varchar(128) default null references card.class(id) on delete restrict on update cascade,
+    created timestamp with time zone not null default current_timestamp,
+    image text default null
 );
-create table card.binder 
+create table card.mixture
 (
-    card uuid references card.instance(id) not null,
-    target uuid references card.instance(id) not null,
-    next uuid references card.instance(id) default null,
-    primary key(card, target, next)
+    id uuid primary key  not null default uuid_generate_v4(),
+    card uuid not null references card.instance(id) on delete cascade on update cascade,
+    input uuid not null references card.instance(id) on delete cascade on update cascade,
+    ouput uuid not null references card.instance(id) on delete cascade on update cascade
 );
 
 create schema deck;
@@ -96,10 +92,10 @@ create type account.method as enum('facebook', 'internal');
 create table account.sign
 (
     method account.method not null,
-    key text not null,
+    value text not null,
     created timestamp with time zone not null default current_timestamp,
     owner uuid default null references account.user(id) on delete cascade on update cascade,
-    primary key(method, key)
+    primary key(method, value)
 );
 create table account.token
 (

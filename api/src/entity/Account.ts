@@ -1,8 +1,6 @@
 import uuid from 'uuid/v4';
 import pg from 'pg';
 import validator from "validator";
-import Cache from 'node-cache'
-import bcrypt from 'bcrypt';
 
 class Account {
     id: string;
@@ -12,7 +10,6 @@ class Account {
     avatar: string | null;
     emails: Account.Email.List;
     signs: Account.Sign.List;
-    tokens: Account.Token.List;
 
     constructor(p: Account.Configuration) {
         this.id = p.id || uuid();
@@ -22,7 +19,6 @@ class Account {
         this.avatar = p.avatar || null;
         this.emails = p.emails || new Account.Email.List();
         this.signs = p.signs || new Account.Sign.List();
-        this.tokens = p.tokens || new Account.Token.List();
     }
 }
 namespace Account {
@@ -51,7 +47,7 @@ namespace Account {
         export type Configuration = Partial<Sign> & Omit<Sign, 'created'> & Pick<Sign, 'id'>
         export class Id {
             readonly method: Method;
-            readonly key: string;
+            readonly value: string;
         }
 
         export class List extends Array<Sign> {
@@ -59,7 +55,7 @@ namespace Account {
             includes(searchElement: Sign, fromIndex?: number): boolean;
             includes(s: Sign | Sign.Id, fromIndex?: number): boolean {
                 if (Account.Sign.Id.is(s)) {
-                    return !!super.filter(v => v.id.key === s.key && v.id.method === s.method).length
+                    return !!super.filter(v => v.id.value === s.value && v.id.method === s.method).length
                 }
                 return super.includes(s, fromIndex);
             }
@@ -75,13 +71,13 @@ namespace Account {
             }
         }
         export namespace Id {
-            export function is(value: Id | any): value is Id {
-                return value instanceof Object
-                    && value.method !== undefined && value.key !== undefined
-                    && typeof value.method === 'string'
-                    && typeof value.key === 'string'
-                    && Account.Sign.Method.is(value.method)
-                    && value.key !== '';
+            export function is(v: Id | any): v is Id {
+                return v instanceof Object
+                    && v.method !== undefined && v.value !== undefined
+                    && typeof v.method === 'string'
+                    && typeof v.value === 'string'
+                    && Account.Sign.Method.is(v.method)
+                    && v.value !== '';
             }
         }
     }
@@ -118,95 +114,148 @@ namespace Account {
             }
         }
     }
-    export class Token {
-        id: string;
-        created: Date;
-        updated: Date;
-        deleted: Date | null;
-        ip: string | null;
 
-        constructor(p?: Token.Configuration) {
-            if (p) {
-                this.id = p.id || uuid();
-                this.created = p.created || new Date;
-                this.updated = p.updated || new Date;
-                this.deleted = p.deleted || null;
-                this.ip = p.ip || null;
+    export class Storage {
+        constructor(private client: pg.ClientBase) {
+        }
+        private filter(f: Storage.Filter): string {
+            switch (f[0]) {
+                case '=': {
+                    switch (f[1]) {
+                        case 'id': {
+                            if (!(f[2] instanceof Array)) f[2] = [f[2]];
+                            return `id IN(${f[2].map(this.client.escapeLiteral).join(',')})`;
+                        }
+                        case 'email': {
+                            if (!(f[2] instanceof Array)) f[2] = [f[2]];
+                            const ph = f[2].map(this.client.escapeLiteral).join(',');
+                            return `id IN(SELECT owner FROM account.email WHERE address IN(${ph}))`;
+                        }
+                        case 'sign': {
+                            if (!(f[2] instanceof Array)) f[2] = [f[2]];
+                            const m = (v: Account.Sign.Id) => `(${this.client.escapeLiteral(v.method)},${this.client.escapeLiteral(v.value)})`;
+                            const ph = f[2].map(m).join(',');
+                            return `id IN(SELECT owner FROM account.sign WHERE (method, value) IN (${ph}))`;
+                        }
+                        case 'token': {
+                            if (!(f[2] instanceof Array)) f[2] = [f[2]];
+                            const ph = f[2].map(value => this.client.escapeLiteral(value)).join(',');
+                            return `id IN(SELECT owner FROM account.token WHERE id IN (${ph}))`;
+                        }
+                    }
+                }  
+                case '&&': {
+                    return f[1].map(v => `(${this.filter(v)})`).join(' AND ');
+                }
+                case '||': {
+                    return f[1].map(v => `(${this.filter(v)})`).join(' OR ');
+                }
             }
         }
-    }
-    export namespace Token {
-        export type Configuration = Partial<Token>;
+        public async read(condition?: { filter?: Storage.Filter, limit?: number, skip?: number }): Promise<Account.List> {
+            let sql = ['SELECT * FROM account.user'];
+            if (condition) {
+                if (condition.filter) sql.push('WHERE ' + this.filter(condition.filter));
+                if (condition.limit) sql.push('LIMIT ' + condition.limit);
+                if (condition.skip) sql.push('OFFSET ' + condition.skip);
+            }
 
-        export class List extends Array<Token>{
-
-        }
-    }
-
-    export function storage(pg: pg.ClientBase) {
-        return new class Storage {
-            public async save(...accounts: Array<Account>) {
-                await pg.query(
-                    `
-                    INSERT INTO account.user 
-                    (id, created, name, avatar, deleted) 
-                    VALUES 
-                    ${
-                    accounts.map((v) => `(
-                                ${pg.escapeLiteral(v.id)},
-                                ${pg.escapeLiteral(v.created.toISOString())},
-                                ${pg.escapeLiteral(v.name)},
-                                ${v.avatar ? pg.escapeLiteral(v.avatar) : null},
-                                ${v.deleted ? pg.escapeLiteral(v.deleted.toISOString()) : null}
-                        )`).join(',')
-                    }
-                    ON CONFLICT(id) 
-                    DO UPDATE SET 
-                        name=EXCLUDED.name, 
-                        avatar=EXCLUDED.avatar, 
-                        deleted=EXCLUDED.deleted
-                    `
-                )
-                let emails = [];
-                let signs = [];
-                let tokens = [];
-                for (const account of accounts) {
-                    for (const v of account.emails) {
-                        emails.push(
-                            `(
-                                ${pg.escapeLiteral(v.id)},
-                                ${pg.escapeLiteral(account.id)},
-                                ${pg.escapeLiteral(v.address)},
-                                ${pg.escapeLiteral(v.created.toISOString())}
-                            )`
-                        );
-                    }
-                    for (const v of account.signs) {
-                        signs.push(
-                            `(
-                                ${pg.escapeLiteral(account.id)},
-                                ${pg.escapeLiteral(v.id.method)},
-                                ${pg.escapeLiteral(v.id.key)},
-                                ${pg.escapeLiteral(v.created.toISOString())}
-                            )`
-                        );
-                    }
-                    for (const v of account.tokens) {
-                        tokens.push(
-                            `(
-                                ${pg.escapeLiteral(account.id)},
-                                ${pg.escapeLiteral(v.id)},
-                                ${pg.escapeLiteral(v.created.toISOString())},
-                                ${pg.escapeLiteral(v.updated.toISOString())},
-                                ${v.deleted ? pg.escapeLiteral(v.deleted.toISOString()) : 'null'},
-                                ${v.ip ? pg.escapeLiteral(v.ip) : 'null'}
-                            )`
-                        );
+            const result = await this.client.query(sql.join(' '));
+            if (result.rowCount === 0) {
+                return new Account.List;
+            }
+            const ph = result.rows
+                .map(v => this.client.escapeLiteral(v.id))
+                .join(',');
+            let emails: Map<string, Account.Email.List> = new Map();
+            let signs: Map<string, Account.Sign.List> = new Map();
+            {
+                const result = await this.client.query(`SELECT * FROM account.email WHERE owner IN (${ph}) ORDER BY created`);
+                for (const row of result.rows) {
+                    const email = new Account.Email({
+                        id: row.id,
+                        address: row.address,
+                        created: new Date(row.created),
+                    });
+                    if (emails.has(row.owner)) {
+                        emails.get(row.owner)!.push(email);
+                    } else {
+                        emails.set(row.owner, new Account.Email.List(email));
                     }
                 }
-
-                await pg.query(
-                    `
+            }
+            {
+                const result = await this.client.query(`SELECT * FROM account.sign WHERE owner IN (${ph}) ORDER BY created`);
+                for (const row of result.rows) {
+                    const sign = new Account.Sign({
+                        id: { method: row.method, value: row.value },
+                        created: new Date(row.created),
+                    });
+                    if (signs.has(row.owner)) {
+                        signs.get(row.owner)!.push(sign);
+                    } else {
+                        signs.set(row.owner, new Account.Sign.List(sign));
+                    }
+                }
+            }
+            return new Account.List(...result.rows.map(row => new Account({
+                avatar: row.avatar,
+                name: row.name,
+                id: row.id,
+                deleted: row.deleted ? new Date(row.deleted) : null,
+                created: new Date(row.created),
+                emails: emails.get(row.id),
+                signs: signs.get(row.id),
+            })));
+        }
+        public async save(...accounts: Array<Account>) {
+            await this.client.query(
+                `
+                INSERT INTO account.user 
+                (id, created, name, avatar, deleted) 
+                VALUES 
+                ${
+                accounts.map((v) => `(
+                    ${this.client.escapeLiteral(v.id)},
+                    ${this.client.escapeLiteral(v.created.toISOString())},
+                    ${this.client.escapeLiteral(v.name)},
+                    ${v.avatar ? this.client.escapeLiteral(v.avatar) : 'NULL'},
+                    ${v.deleted ? this.client.escapeLiteral(v.deleted.toISOString()) : 'NULL'}
+                )`).join(',')
+                }
+                ON CONFLICT(id) 
+                DO UPDATE SET 
+                    name=EXCLUDED.name, 
+                    avatar=EXCLUDED.avatar, 
+                    deleted=EXCLUDED.deleted
+                `
+            )
+            let emails = [];
+            let signs = [];
+            for (const account of accounts) {
+                for (const v of account.emails) {
+                    emails.push(
+                        `(
+                            ${this.client.escapeLiteral(v.id)},
+                            ${this.client.escapeLiteral(account.id)},
+                            ${this.client.escapeLiteral(v.address)},
+                            ${this.client.escapeLiteral(v.created.toISOString())}
+                        )`
+                    );
+                }
+                for (const v of account.signs) {
+                    signs.push(
+                        `(
+                            ${this.client.escapeLiteral(account.id)},
+                            ${this.client.escapeLiteral(v.id.method)},
+                            ${this.client.escapeLiteral(v.id.value)},
+                            ${this.client.escapeLiteral(v.created.toISOString())}
+                        )`
+                    );
+                }
+            }
+            if (emails.length) {
+                const query = `
                     INSERT INTO account.email (id,owner,address,created)
                     VALUES
                     ${emails.join(',')}
@@ -215,159 +264,28 @@ namespace Account {
                         address = EXCLUDED.address
                         WHERE account.email.owner=EXCLUDED.owner
                     `
-                );
-                await pg.query(
-                    `
-                    INSERT INTO account.sign (owner,method,key,created)
+                await this.client.query(query);
+            }
+            if (signs.length) {
+                const query = `
+                    INSERT INTO account.sign (owner,method,value,created)
                     VALUES
                     ${signs.join(',')}
-                    ON CONFLICT(method, key)
+                    ON CONFLICT(method, value)
                     DO NOTHING
                     `
-                );
-                await pg.query(
-                    `
-                    INSERT INTO account.token (id,created,updated,deleted,ip)
-                    VALUES
-                    ${tokens.join(',')}
-                    ON CONFLICT(id)
-                    DO UPDATE SET 
-                        updated = EXCLUDED.updated,
-                        deleted = EXCLUDED.deleted
-                        WHERE account.token.owner=EXCLUDED.owner
-                    `
-                );
-            }
-
-            public find() {
-                return new class Finder {
-                    private _id: Array<Account['id']> = [];
-                    private _email: Array<Account.Email['address']> = [];
-                    private _sign: Array<Account.Sign['id']> = [];
-
-                    public id(...v: Array<Account['id']>): this {
-                        this._id = v;
-                        return this;
-                    }
-
-                    public email(...v: Finder['_email']): this {
-                        this._email = v
-                        return this
-                    }
-
-                    public sign(...v: Finder['_sign']): this {
-                        this._sign = v
-                        return this
-                    }
-                    public async read(): Promise<Account.List> {
-                        let sql = ['SELECT * FROM account.user'];
-                        {
-                            let where = [];
-                            if (this.id && this._id.length > 0) {
-                                const ph = this._id
-                                    .map(v => pg.escapeLiteral(v))
-                                    .join(',');
-                                where.push(`account.user.id IN (${ph})`);
-                            }
-                            if (this._email.length > 0) {
-                                const ph = this._email
-                                    .map(v => pg.escapeLiteral(v))
-                                    .join(',');
-                                where.push(
-                                    `account.user.id IN (
-                                SELECT account.email.owner 
-                                FROM account.email 
-                                WHERE account.email.address IN (${ph})
-                            )`
-                                );
-                            }
-                            if (this._sign.length > 0) {
-                                const ph = this._sign
-                                    .map((v) => `(${pg.escapeLiteral(v.method)},${pg.escapeLiteral(v.key)})`)
-                                    .join(',');
-                                where.push(
-                                    `account.user.id IN(
-                                SELECT account.sign.owner 
-                                FROM account.sign 
-                                WHERE (account.sign.method, account.sign.key) IN (${ph})
-                            )`
-                                );
-                            }
-                            if (where.length) {
-                                sql.push('WHERE ' + where.join(' AND '));
-                            }
-                        }
-
-                        const result = await pg.query(sql.join(' '));
-                        if (result.rowCount === 0) {
-                            return new Account.List;
-                        }
-                        const ph = result.rows
-                            .map(v => pg.escapeLiteral(v.id))
-                            .join(',');
-                        let emails: Map<number, Account.Email.List> = new Map();
-                        let signs: Map<number, Account.Sign.List> = new Map();
-                        let tokens: Map<number, Account.Token.List> = new Map();
-                        {
-                            const result = await pg.query(`SELECT * FROM account.email WHERE account.email.owner IN (${ph}) ORDER BY account.email.created`);
-                            for (const row of result.rows) {
-                                const email = new Account.Email({
-                                    id: row.id,
-                                    address: row.address,
-                                    created: new Date(row.created),
-                                });
-                                if (emails.has(row.owner)) {
-                                    emails.get(row.owner)!.push(email);
-                                } else {
-                                    emails.set(row.owner, new Account.Email.List(email));
-                                }
-                            }
-                        }
-                        {
-                            const result = await pg.query(`SELECT * FROM account.sign WHERE account.sign.owner IN (${ph}) ORDER BY account.sign.created`);
-                            for (const row of result.rows) {
-                                const sign = new Account.Sign({
-                                    id: { method: row.method, key: row.key },
-                                    created: new Date(row.created),
-                                });
-                                if (signs.has(row.owner)) {
-                                    signs.get(row.owner)!.push(sign);
-                                } else {
-                                    signs.set(row.owner, new Account.Sign.List(sign));
-                                }
-                            }
-                        }
-                        {
-                            const result = await pg.query(`SELECT * FROM account.token WHERE account.token.owner IN (${ph}) ORDER BY account.token.created`);
-                            for (const row of result.rows) {
-                                const token = new Account.Token({
-                                    deleted: row.deleted ? new Date(row.deleted) : null,
-                                    created: new Date(row.created),
-                                    updated: new Date(row.updated),
-                                    ip: row.ip || null,
-                                    id: row.id,
-                                });
-                                if (tokens.has(row.owner)) {
-                                    tokens.get(row.owner)!.push(token);
-                                } else {
-                                    tokens.set(row.owner, new Account.Token.List(token));
-                                }
-                            }
-                        }
-                        return new Account.List(...result.rows.map(row => new Account({
-                            avatar: row.avatar,
-                            name: row.name,
-                            id: row.id,
-                            deleted: row.deleted ? new Date(row.deleted) : null,
-                            created: new Date(row.created),
-                            emails: emails.get(row.id),
-                            signs: signs.get(row.id),
-                            tokens: tokens.get(row.id),
-                        })));
-                    }
-                }
+                await this.client.query(query);
             }
         }
+    }
+    export namespace Storage {
+        export type Filter =
+            { 0: '||' | '&&', 1: Array<Filter> }
+            | ['=', 'id', string | Array<string>]
+            | ['=', 'email', string | Array<string>]
+            | ['=', 'sign', Account.Sign.Id | Array<Account.Sign.Id>]
+            | ['=', 'token', string | Array<string>]
+            ;
     }
 }
 
