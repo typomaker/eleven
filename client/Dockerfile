@@ -1,7 +1,7 @@
 FROM node:alpine
-RUN apk update && apk upgrade \
-    && apk add --no-cache bash git openssh
+RUN apk --no-cache add --virtual build-deps build-base python bash git openssh
 WORKDIR /client
-CMD ["npm", "run", "start"]
-ENV NODE_ENV=development
+ENTRYPOINT ["bash", "./entrypoint.sh"]
+ENV ENV=production
+COPY package* ./
 COPY . .
