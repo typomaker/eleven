@@ -1,0 +1,21 @@
+{
+  "typescript.updateImportsOnFileMove.enabled": "always",
+  "intelephense.completion.fullyQualifyGlobalConstantsAndFunctions": true,
+  "git.autofetch": true,
+  "files.autoSave": "onFocusChange",
+  "editor.formatOnPaste": true,
+  "window.zoomLevel": 0,
+  "explorer.autoReveal": false,
+  "problems.autoReveal": false,
+  "editor.formatOnSave": true,
+  "editor.fontFamily": "Fira Code, Menlo, Monaco, 'Courier New', monospace",
+  "editor.fontLigatures": true,
+  "[typescript]": {
+    "editor.codeActionsOnSave": {
+      "source.fixAll": true,
+      "source.organizeImports": true,
+    },
+  },
+  "editor.tabSize": 2,
+  "typescript.tsdk": "node_modules/typescript/lib"
+}

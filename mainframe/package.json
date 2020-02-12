@@ -1,0 +1,33 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "scripts": {
+    "start": "node ./dist/index.js",
+    "watch": "npx tsc -w & nodemon",
+    "build": "npx tsc"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^0.19.2",
+    "bcrypt": "^3.0.8",
+    "pg": "^7.18.1",
+    "recaptcha2": "^1.3.3",
+    "ts-nats": "^1.2.4",
+    "uuid": "^3.4.0",
+    "validator": "^10.10.0"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^3.0.0",
+    "@types/axios": "^0.14.0",
+    "@types/pg": "^7.14.1",
+    "@types/recaptcha2": "^1.3.0",
+    "@types/uuid": "^3.4.7",
+    "@types/validator": "^10.11.3",
+    "nodemon": "^1.19.4",
+    "tslint": "^5.20.1",
+    "typescript": "^3.7.5"
+  }
+}
