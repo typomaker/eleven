@@ -6,7 +6,7 @@ class Account {
   constructor(private readonly container: Container) { }
   public async signin(p: Account.Credential): Promise<entity.Token> {
     let token: entity.Token;
-    switch (p.kind) {
+    switch (p.type) {
       case "password": {
         let email = await this.container.storage.email.read().address(p.email).one()
         let sign: entity.Sign | null
@@ -15,38 +15,39 @@ class Account {
           await this.container.storage.account.save(owner);
           email = new entity.Email({ address: p.email, owner })
           await this.container.storage.email.save(email);
-          sign = new entity.Sign({ kind: "password", data: await this.container.password.hash(p.password), owner: owner });
+          sign = new entity.Sign({ type: "password", data: await this.container.password.hash(p.data), owner: owner });
           await this.container.storage.sign.save(sign);
         } else {
-          sign = await this.container.storage.sign.read().kind("password").owner(email.owner).one();
+          sign = await this.container.storage.sign.read().type("password").owner(email.owner).one();
           if (!sign) throw new Account.Error("SignNotExist");
-          if (!await this.container.password.compare(p.password, sign.data)) throw new Account.Error("InvalidPassword");
+          if (!await this.container.password.compare(p.data, sign.data)) throw new Account.Error("InvalidPassword");
         }
         token = new entity.Token({ owner: sign.owner, sign, ip: p.ip });
         break;
       }
       case "facebook": {
-        const fb = await axios.get(`https://graph.facebook.com/v4.0/me`, { params: { access_token: p.token, fields: "id,email,name" } });
-        let sign = await this.container.storage.sign.read().kind("facebook").data(fb.data.id).one();
+        const fb = await axios.get(`https://graph.facebook.com/v4.0/me`, { params: { access_token: p.data, fields: "id,email,name" } });
+        let sign = await this.container.storage.sign.read().type("facebook").data(fb.data.id).one();
         if (!sign) {
           if (fb.data.email) {
-            let email = await this.container.storage.email.read().address(fb.data.email).owner(fb.data.email).one()
+            let email = await this.container.storage.email.read().address(fb.data.email).one()
             if (!email) {
-              const owner = new entity.Account({ name: fb.data.name || fb.data.email?.split("@")[0] });
+              const name = fb.data.name || fb.data.email?.split("@")[0]
+              const owner = new entity.Account({ name });
               await this.container.storage.account.save(owner);
               email = new entity.Email({ address: fb.data.email, confirmed: new Date(), owner: owner });
               await this.container.storage.email.save(email);
             }
             if (!email.isConfirmed) throw new Account.Error("EmailUnconfirmed");
-            sign = new entity.Sign({ kind: "facebook", owner: email.owner, data: fb.data.id });
+            sign = new entity.Sign({ type: "facebook", owner: email.owner, data: fb.data.id });
           } else {
             const owner = new entity.Account({ name: fb.data.name });
             await this.container.storage.account.save(owner);
-            sign = new entity.Sign({ kind: "facebook", owner, data: fb.data.id });
+            sign = new entity.Sign({ type: "facebook", owner, data: fb.data.id });
           }
         } else {
           if (fb.data.email) {
-            let email = await this.container.storage.email.read().address(fb.data.email).owner(fb.data.email).one()
+            let email = await this.container.storage.email.read().address(fb.data.email).one()
             if (!email) {
               email = new entity.Email({ address: fb.data.email, confirmed: new Date(), owner: sign.owner });
               await this.container.storage.email.save(email);
@@ -83,21 +84,19 @@ class Account {
 const BaseError = Error;
 namespace Account {
   export class Error extends BaseError { }
-  export type Credential = (
-    & { ip: string }
-    & (
-      | { kind: "facebook", token: string }
-      | { kind: "password", email: string, password: string }
-    )
-  );
+  export type Credential = {
+    type: "facebook" | "password"
+    data: string
+    email: string
+    ip?: string
+  };
   export namespace Creadential {
     export function is(v: any | Credential): v is Credential {
+      if (!entity.Sign.Kind.is(v?.type)) return false;
+      if (typeof v.token !== "string") return false
+      if (typeof v.email !== "string") return false
       if (v.ip && typeof v.ip !== "string") return false;
-      switch (v?.kind) {
-        case "facebook": return typeof v.token === "string";
-        case "password": return typeof v.email === "string" && typeof v.password === "string";
-        default: return false;
-      }
+      return true;
     }
   }
 }

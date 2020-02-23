@@ -1,40 +1,88 @@
-import nats from "ts-nats";
+import * as nats from "ts-nats";
+import validator from "validator";
 import * as entity from "../entity";
 import Account from "./Account";
 import Container from "./Container";
 
-
-type Response = (
-  | Response.Success
-  | Response.Fail
-  | Response.Token
+type Message = (
+  | Message.Failure
+  | Message.Success
+  | Message.Signin
+  | Message.Signout
+  | Message.Authorize
+  | Message.Token
+  | Message.Account
+  | Message.Account.GET
 )
+namespace Message {
+  export type Failure = { type: "Failure", payload: string }
+  export function Failure(payload: string): Failure {
+    return { type: "Failure", payload }
+  }
 
-namespace Response {
-  type Body<K extends boolean, T> = {
-    ok: K
-    payload?: T
+  export namespace Failure {
+    export const Invalid = Failure("Invalid")
+    export const Unexpected = Failure("Unexpected")
+    export const Internal = Failure("Internal")
   }
-  export type Success = Body<true, never>
-  export const Success = (): Success => ({ ok: true })
-  export type Fail = Body<false, string | undefined>
-  export function Fail(payload?: string): Fail {
-    return { ok: false, payload }
+
+  export type Success = { type: "Success" }
+  export function Success(): Success {
+    return { type: "Success" }
   }
-  export namespace Fail {
-    export const Invalid = Fail("Invalid");
-    export const Internal = Fail("Internal");
+
+  export type Signin = { type: "Signin", payload: { type: "password" | "facebook", data: string, email: string } }
+  export function Signin(payload: Signin["payload"]): Signin {
+    return { type: "Signin", payload }
   }
-  export type Token = Body<true, { id: string, expired?: string, sign?: string, owner: string }>
-  export const Token = (data: entity.Token): Token => ({
-    ok: true,
-    payload: {
-      id: data.id,
-      owner: data.owner.id,
-      expired: data.expired?.toISOString(),
-      sign: data.sign?.id
+
+  export namespace Signin {
+    export function is(target: any): target is Signin {
+      return (
+        target?.type === "Signin"
+        && validator.isIn(target?.payload?.type ?? "", ["password", "facebook",])
+        && !validator.isEmpty(target?.payload?.data ?? "")
+        && validator.isEmail(target?.payload?.email ?? "")
+      )
     }
-  })
+  }
+
+  export type Signout = { type: "Signout", payload: { token: string } }
+  export function Signout(payload: Signout["payload"]): Signout {
+    return { type: "Signout", payload }
+  }
+
+  export namespace Signout {
+    export function is(target: Signout | any): target is Signout {
+      return !validator.isEmpty(target?.token)
+    }
+  }
+  export type Authorize = { type: "Authorize", payload: { token: string } }
+  export function Authorize(payload: Authorize["payload"]): Authorize {
+    return { type: "Authorize", payload }
+  }
+  export namespace Authorize {
+    export function is(target: Authorize | any): target is Authorize {
+      return !validator.isEmpty(target?.token)
+    }
+  }
+
+  export type Token = { type: "Token", payload: { id: string, expired?: Date } }
+  export const Token = (token: entity.Token): Token => {
+    return { type: "Token", payload: { id: token.id, expired: token.expired ?? undefined } }
+  }
+
+  export type Account = { type: "Account", payload: Pick<entity.Account, "id" | "avatar" | "name"> }
+  export function Account(account: entity.Account): Account {
+    return { type: "Account", payload: { id: account.id, avatar: account.avatar, name: account.name } }
+  }
+
+  export namespace Account {
+    export type GET = { type: "Account.GET", payload: { id: string, token: string } }
+    export const GET = (payload: GET["payload"]): GET => {
+      return { type: "Account.GET", payload }
+    }
+  }
 }
 
 
@@ -43,66 +91,43 @@ class Server {
   constructor(private readonly container: Container) { }
   public async connect() {
     this.close();
-
     this.client = await nats.connect({ servers: ['nats://nats:4222'], payload: nats.Payload.JSON, name: "mainframe" });
-    {
-      const queue = "rpc";
-      await this.client.subscribe('signin', (...args) => this.signin(...args), { queue });
-      await this.client.subscribe('signout', (...args) => this.signout(...args), { queue });
-      await this.client.subscribe('authorize', (...args) => this.authorize(...args), { queue });
-    }
+    await this.client.subscribe("rpc", (...args) => this.rpc(...args), { queue: "rpc" });
   }
   public close() {
     if (!this.client) return;
     this.client.close();
     this.client = undefined;
   }
-  private checkError(err: nats.NatsError | null) {
-    if (!err) return false;
-    this.container.log.error(`${err.name} ${err.message} ${err.chainedError?.stack}`);
-    return true;
-  }
-  private respond(subject: string | undefined, body: Response): boolean {
-    if (subject) {
-      this.client?.publish(subject, body);
-      return true;
-    }
-    return false;
-  }
-  private async signin(err: nats.NatsError | null, msg: nats.Msg) {
-    if (this.checkError(err)) return;
-    const data = msg.data
-    if (!Account.Creadential.is(data)) return this.respond(msg.reply, Response.Fail.Invalid);
+  private async rpc(err: nats.NatsError | null, msg: nats.Msg) {
+    if (err) return this.container.log.error(`rpc. ${err.name} ${err.message} ${err.chainedError?.stack}`);
+    const req: Message = msg.data;
+    let res: Message = Message.Failure.Unexpected;
     try {
-      const token = await this.container.account.signin(data);
-      this.respond(msg.reply, Response.Token(token))
+      switch (req.type) {
+        case "Signin": {
+          res = Message.Signin.is(req) ? Message.Token(await this.container.account.signin(req.payload)) : Message.Failure.Invalid;
+          break;
+        }
+        case "Signout": {
+          res = Message.Signout.is(req) ? Message.Token(await this.container.account.signout(req.payload.token)) : Message.Failure.Invalid;
+          break;
+        }
+        case "Authorize": {
+          res = Message.Authorize.is(req) ? Message.Token(await this.container.account.authorize(req.payload.token)) : Message.Failure.Invalid;
+          break;
+        }
+      }
     } catch (e) {
-      this.container.log.error(e);
-      return this.respond(msg.reply, Response.Fail.Internal)
+      if (e instanceof Account.Error) {
+        res = Message.Failure(e.message)
+      } else {
+        this.container.log.error(e)
+        res = Message.Failure.Internal;
+      }
     }
-  }
-  private async signout(err: nats.NatsError | null, msg: nats.Msg) {
-    if (this.checkError(err)) return;
-    const data = msg.data
-    if (typeof data?.id !== "string") return this.respond(msg.reply, Response.Fail.Invalid);
-    try {
-      const token = await this.container.account.signout(data.id);
-      this.respond(msg.reply, Response.Success())
-    } catch (e) {
-      this.container.log.error(e);
-      return this.respond(msg.reply, Response.Fail.Internal)
-    }
-  }
-  private async authorize(err: nats.NatsError | null, msg: nats.Msg) {
-    if (this.checkError(err)) return;
-    const data = msg.data
-    if (typeof data?.id !== "string") return this.respond(msg.reply, Response.Fail.Invalid);
-    try {
-      const token = await this.container.account.authorize(data.id);
-      this.respond(msg.reply, Response.Token(token))
-    } catch (e) {
-      this.container.log.error(e);
-      return this.respond(msg.reply, Response.Fail.Internal)
+    if (msg.reply) {
+      this.client?.publish(msg.reply, res);
     }
   }
 }

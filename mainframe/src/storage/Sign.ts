@@ -5,7 +5,7 @@ import Stash from "./Stash";
 type Filter = (
   | ["&" | "|", Filter[]]
   | ["=", "id", entity.Sign["id"]]
-  | ["=", "kind", entity.Sign["kind"]]
+  | ["=", "type", entity.Sign["type"]]
   | ["=", "data", entity.Sign["data"]]
   | ["=", "owner", entity.Sign["owner"]["id"]]
   | ["in", "id", Array<entity.Sign["id"]>]
@@ -16,7 +16,7 @@ namespace Filter {
       case "|": case "&": return st[1].map(e => `(${Filter.build(e)})`).join({ "|": " OR ", "&": " AND " }[st[0]]);
       case "=": switch (st[1]) {
         case "id": return `id=${pg.Client.prototype.escapeLiteral(st[2])}`;
-        case "kind": return `kind=${pg.Client.prototype.escapeLiteral(st[2])}`;
+        case "type": return `type=${pg.Client.prototype.escapeLiteral(st[2])}`;
         case "data": return `data=${pg.Client.prototype.escapeLiteral(st[2])}`;
         case "owner": return `owner=${pg.Client.prototype.escapeLiteral(st[2])}`
       }
@@ -35,7 +35,7 @@ export class Sign {
     return rows.map((row) => this.stash.get(row.id, () => new entity.Sign({
       id: String(row.id),
       created: new Date(row.created),
-      kind: row.kind,
+      type: row.type,
       data: String(row.data),
       owner: owners.get(row.owner)!,
     })));
@@ -47,20 +47,18 @@ export class Sign {
       return this.stash.get(id) ?? await this.read(["=", "id", id]).one();
     const notStashed = id.filter(v => !this.stash.has(v));
     if (notStashed.length)
-      await this.read(["in", "id", notStashed]);
-    return new Map(id.filter(this.stash.has).map(v => [v, this.stash.get(v)!]));
+      await this.read(["in", "id", notStashed]).all();
+    return new Map(id.filter(v => this.stash.has(v)).map(v => [v, this.stash.get(v)!]));
 
   }
   public read(filter?: Filter) {
-    return new class Reader extends Promise<entity.Sign[]> {
+    return new class Reader {
       private _filter?: Filter = filter;
       private _limit: number | undefined;
       private _skip: number | undefined;
-      constructor(private readonly repository: Sign) {
-        super((ok, fail) => this.all().then(ok, fail));
-      }
-      public kind(n: entity.Sign["kind"]) {
-        return this.filter(["=", "kind", n]);
+      constructor(private readonly repository: Sign) { }
+      public type(n: entity.Sign["type"]) {
+        return this.filter(["=", "type", n]);
       }
       public owner(n: entity.Account) {
         return this.filter(["=", "owner", n.id]);
@@ -95,8 +93,8 @@ export class Sign {
         return reader;
       }
       private static build(e: Reader) {
-        let query = "SELECT id, kind, data, created, owner FROM account.sign";
-        if (filter) query += " WHERE " + Filter.build(filter);
+        let query = "SELECT id, type, data, created, owner FROM account.sign";
+        if (e._filter) query += " WHERE " + Filter.build(e._filter);
         if (e._limit) query += " LIMIT " + Number(e._limit);
         if (e._skip) query += " OFFSET " + Number(e._skip);
         return query;
@@ -107,7 +105,7 @@ export class Sign {
       }
       public async all(): Promise<entity.Sign[]> {
         const sql = Reader.build(this);
-        return this.repository.context.connect(async () => {
+        return await this.repository.context.connect(async () => {
           const response = await this.repository.context.query(sql);
           return this.repository.make(response.rows);
         })
@@ -121,12 +119,12 @@ export class Sign {
     }
     if (signs.length === 0) return;
     const sql = `
-      INSERT INTO account.sign(id, kind, data, created, owner) 
+      INSERT INTO account.sign(id, type, data, created, owner) 
       VALUES 
       (${
       signs.map(v => [
         pg.Client.prototype.escapeLiteral(v.id),
-        pg.Client.prototype.escapeLiteral(v.kind),
+        pg.Client.prototype.escapeLiteral(v.type),
         pg.Client.prototype.escapeLiteral(v.data),
         pg.Client.prototype.escapeLiteral(v.created.toISOString()),
         pg.Client.prototype.escapeLiteral(v.owner.id),
@@ -135,9 +133,9 @@ export class Sign {
       ON CONFLICT(id) 
         DO UPDATE 
           SET data=EXCLUDED.data 
-          WHERE (account.data)!=(EXCLUDED.data)
+          WHERE (sign.data)!=(EXCLUDED.data)
     `
-    this.context.query(sql)
+    await this.context.query(sql)
   }
 }
 export default Sign;

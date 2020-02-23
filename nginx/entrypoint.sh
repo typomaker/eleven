@@ -25,7 +25,7 @@ if [[ "$ENV" == "development" ]]; then
         -config <(echo '[req]'; \
         echo 'distinguished_name=req'; \
         echo '[san]'; \
-        echo "subjectAltName=DNS:${DOMAIN},DNS:api.${DOMAIN}" \
+        echo "subjectAltName=DNS:${DOMAIN},DNS:gateway.${DOMAIN}" \
         ) \
         -subj "/CN=${DOMAIN}"
 fi

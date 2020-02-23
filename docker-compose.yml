@@ -21,8 +21,9 @@ services:
   nats:
     build:
       context: nats
-  # gateway:
-  #   restart: unless-stopped
-  #   build:
-  #     context: gateway
-  #     target: production
+  gateway:
+    restart: unless-stopped
+    build:
+      context: gateway
+      target: production
+

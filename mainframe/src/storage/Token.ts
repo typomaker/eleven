@@ -47,25 +47,22 @@ export class Sign {
       return this.stash.get(id) ?? await this.read(["=", "id", id]).one();
     }
     const notStashed = id.filter((v) => !this.stash.has(v));
-    if (notStashed.length) {
-      await this.read(["in", "id", notStashed]);
-    }
-    return new Map(id.filter(this.stash.has).map((v) => [v, this.stash.get(v)!]));
+    if (notStashed.length)
+      await this.read(["in", "id", notStashed]).all();
+    return new Map(id.filter(v => this.stash.has(v)).map((v) => [v, this.stash.get(v)!]));
   }
   public read(filter?: Filter) {
-    return new class Reader extends Promise<entity.Token[]> {
-      private static build(e: Reader) {
-        let query = "SELECT id, created, owner, updated, deleted, expired, ip, sign FROM account.token";
-        if (filter) query += " WHERE " + Filter.build(filter);
-        if (e._limit) query += " LIMIT " + Number(e._limit);
-        if (e._skip) query += " OFFSET " + Number(e._skip);
-        return query;
-      }
+    return new class Reader {
       private _filter?: Filter = filter;
       private _limit: number | undefined;
       private _skip: number | undefined;
-      constructor(private readonly repository: Sign) {
-        super((ok, fail) => this.all().then(ok, fail));
+      constructor(private readonly repository: Sign) { }
+      private static build(e: Reader) {
+        let query = "SELECT id, created, owner, updated, deleted, expired, ip, sign FROM account.token";
+        if (e._filter) query += " WHERE " + Filter.build(e._filter);
+        if (e._limit) query += " LIMIT " + Number(e._limit);
+        if (e._skip) query += " OFFSET " + Number(e._skip);
+        return query;
       }
       public isExpired(v: entity.Token["isExpired"] = true) {
         return this.filter(["=", "isExpired", v]);
@@ -98,7 +95,7 @@ export class Sign {
       }
       public async all(): Promise<entity.Token[]> {
         const sql = Reader.build(this);
-        return this.repository.context.connect(async () => {
+        return await this.repository.context.connect(async () => {
           const response = await this.repository.context.query(sql);
           return this.repository.make(response.rows);
         })
@@ -132,8 +129,8 @@ export class Sign {
       })
       ON CONFLICT(id)
         DO UPDATE
-          SET updated=EXCLUDED.updated, ip=EXCLUDED.ip, sign=EXCLUDED.sign, deleted=EXCLUDED.deleted, expired=EXCLUDED.expired,
-          WHERE (account.updated, account.ip, account.sign, account.deleted, account.expired)!=(EXCLUDED.updated, EXCLUDED.ip, EXCLUDED.sign, EXCLUDED.deleted, EXCLUDED.expired)
+          SET updated=EXCLUDED.updated, ip=EXCLUDED.ip, sign=EXCLUDED.sign, deleted=EXCLUDED.deleted, expired=EXCLUDED.expired
+          WHERE (token.updated, token.ip, token.sign, token.deleted, token.expired)!=(EXCLUDED.updated, EXCLUDED.ip, EXCLUDED.sign, EXCLUDED.deleted, EXCLUDED.expired)
     `;
     await this.context.query(sql)
   }
@@ -144,7 +141,7 @@ export class Sign {
     if (tokens.length === 0) return;
     const now = new Date();
     const sql = `UPDATE account.token SET deleted=${pg.Client.prototype.escapeLiteral(now.toISOString())} WHERE id IN(${tokens.map(token => pg.Client.prototype.escapeLiteral(token.id)).join(",")})`;
-    this.context.query(sql)
+    await this.context.query(sql)
     tokens.forEach(token => token.deleted = now);
   }
 }

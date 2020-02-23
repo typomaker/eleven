@@ -20,26 +20,18 @@ create table rbac.hierarchy (
   primary key(parent, child)
 );
 create schema card;
-create table card.type (
-  id varchar(256) primary key check(id ~ '^[a-z][a-z.]+$')
-);
 create table card.card (
   id uuid primary key not null default uuid_generate_v4(),
-  type varchar(256) not null references card.type(id) on delete restrict on update cascade,
   name varchar(256) not null references localization.word(id) on delete restrict on update cascade,
+  parent uuid default null references card.card(id) on delete restrict on update cascade,
   created timestamp with time zone not null default current_timestamp,
-  image text default null,
-);
-create table card.behavior (
-  id uuid primary key not null default uuid_generate_v4(),
-  card uuid not null references card.card(id) on delete cascade on update cascade,
-  source uuid not null references card.card(id) on delete cascade on update cascade,
+  image text default null
 );
 create table card.combination (
   id uuid primary key not null default uuid_generate_v4(),
   card uuid not null references card.card(id) on delete cascade on update cascade,
-  input uuid not null references card.card(id) on delete cascade on update cascade,
-  output uuid not null references card.card(id) on delete cascade on update cascade,
+  input uuid not null references card.card(id) on delete restrict on update cascade,
+  output uuid not null references card.card(id) on delete restrict on update cascade,
   unique(card, input, output)
 );
 create schema deck;
@@ -88,14 +80,14 @@ create table account.email (
   deleted timestamp with time zone default null,
   owner uuid not null references account.account(id) on delete cascade on update cascade
 );
-create type account.sign_kind as enum('facebook', 'password');
+create type account.sign_type as enum('facebook', 'password');
 create table account.sign (
-  kind account.sign_kind not null,
+  id uuid primary key not null default uuid_generate_v4(),
+  type account.sign_type not null,
   data text not null,
   created timestamp with time zone not null default current_timestamp,
   deleted timestamp with time zone default null,
-  owner uuid default null references account.account(id) on delete cascade on update cascade,
-  primary key(type, data)
+  owner uuid default null references account.account(id) on delete cascade on update cascade
 );
 create table account.token (
   id uuid primary key not null default uuid_generate_v4(),

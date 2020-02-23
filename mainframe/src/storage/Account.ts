@@ -35,21 +35,20 @@ export class Account {
   public async get(ids: entity.Account["id"]): Promise<entity.Account | null>;
   public async get(ids: Array<entity.Account["id"]>): Promise<Map<entity.Account["id"], entity.Account>>;
   public async get(id: Array<entity.Account["id"]> | entity.Account["id"]) {
+    if (!id) return new Map();
     if (!Array.isArray(id))
       return this.stash.get(id) ?? await this.read(["=", "id", id]).one();
     const notStashed = id.filter(v => !this.stash.has(v));
     if (notStashed.length)
-      await this.read(["in", "id", notStashed]);
-    return new Map(id.filter(this.stash.has).map(v => [v, this.stash.get(v)!]));
+      await this.read(["in", "id", notStashed]).all();
+    return new Map(id.filter(v => this.stash.has(v)).map(v => [v, this.stash.get(v)!]));
   }
   public read(filter?: Filter) {
-    return new class Reader extends Promise<entity.Account[]> {
+    return new class Reader {
       private _filter?: Filter = filter;
       private _limit: number | undefined;
       private _skip: number | undefined;
-      constructor(private readonly repository: Account) {
-        super((ok, fail) => this.all().then(ok, fail));
-      }
+      constructor(private readonly repository: Account) { }
       public id(n: entity.Account["id"] | Array<entity.Account["id"]>) {
         if (Array.isArray(n))
           return this.filter(["in", "id", n]);
@@ -90,7 +89,7 @@ export class Account {
       }
       public async all(): Promise<entity.Account[]> {
         const sql = Reader.build(this);
-        return this.repository.context.connect(async () => {
+        return await this.repository.context.connect(async () => {
           const response = await this.repository.context.query(sql);
           return this.repository.make(response.rows);
         })
@@ -118,7 +117,7 @@ export class Account {
           SET name=EXCLUDED.name, avatar=EXCLUDED.avatar 
           WHERE (account.name,account.avatar)!=(EXCLUDED.name,EXCLUDED.avatar)
     `
-    this.context.query(sql);
+    await this.context.query(sql);
   }
 }
 export default Account;

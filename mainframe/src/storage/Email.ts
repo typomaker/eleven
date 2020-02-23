@@ -42,13 +42,11 @@ export class Email {
   }
 
   public read(filter?: Filter) {
-    return new class Reader extends Promise<entity.Email[]> {
+    return new class Reader {
       private _filter?: Filter = filter;
       private _limit: number | undefined;
       private _skip: number | undefined;
-      constructor(private readonly repository: Email) {
-        super((ok, fail) => this.all().then(ok, fail));
-      }
+      constructor(private readonly repository: Email) { }
       public isConfirmed(n: boolean = true): Reader {
         return this.filter(["=", "isConfirmed", n]);
       }
@@ -86,7 +84,7 @@ export class Email {
       }
       private static build(e: Reader) {
         let query = "SELECT id, address, created, confirmed, owner FROM account.email";
-        if (filter) query += " WHERE " + Filter.build(filter);
+        if (e._filter) query += " WHERE " + Filter.build(e._filter);
         if (e._limit) query += " LIMIT " + Number(e._limit);
         if (e._skip) query += " OFFSET " + Number(e._skip);
         return query;
@@ -97,7 +95,7 @@ export class Email {
       }
       public async all(): Promise<entity.Email[]> {
         const sql = Reader.build(this);
-        return this.repository.context.connect(async () => {
+        return await this.repository.context.connect(async () => {
           const response = await this.repository.context.query(sql);
           return this.repository.make(response.rows);
         })
@@ -110,7 +108,7 @@ export class Email {
       emails = [emails];
     if (emails.length === 0) return;
     const sql = `
-      INSERT INTO account.email(id, address, created, confirmed, owner), 
+      INSERT INTO account.email(id, address, created, confirmed, owner) 
       VALUES 
       (${
       emails.map(v => [
@@ -124,9 +122,9 @@ export class Email {
       ON CONFLICT(id) 
         DO UPDATE 
           SET confirmed=EXCLUDED.confirmed 
-          WHERE (account.confirmed)!=(EXCLUDED.confirmed)
+          WHERE (email.confirmed)!=(EXCLUDED.confirmed)
     `
-    this.context.query(sql)
+    await this.context.query(sql)
   }
 }
 export default Email;

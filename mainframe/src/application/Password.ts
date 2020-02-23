@@ -3,8 +3,8 @@ import bcrypt from "bcrypt";
 class Password {
   constructor(private readonly config: Password.Configuration) { }
   private complicate(v: string): string {
-    if (v.length === 1) v = this.config.salt + v;
-    return v.split("").reverse().join(this.config.salt);
+    const separator = this.config.salt.charAt(0);
+    return this.config.salt + v.split("").reverse().join(separator);
   }
   public async hash(v: string) {
     v = this.complicate(v);

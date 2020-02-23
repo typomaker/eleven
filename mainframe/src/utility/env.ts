@@ -1,9 +1,7 @@
 function fallback<T>(value: T): NonNullable<T> {
-  if (!value) throw new Error(`Required set value for '${name}' environment variable`);
+  if (!value) throw new Error(`Required set value for '${value}' environment variable`);
   return value as NonNullable<T>;
 }
-
-
 export function string(name: string, def?: string): string {
   if (process.env[name]) {
     return process.env[name]!;
