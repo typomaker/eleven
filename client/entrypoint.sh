@@ -2,7 +2,7 @@
 set -eo pipefail
 
 CMD=$@
-NODE_ENV=${ENV}
+export NODE_ENV=${ENV}
 echo "NODE_ENV="${NODE_ENV};
 if [[ ${CMD} = "" ]]; then
     case ${ENV} in
