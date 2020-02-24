@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Button from '@material-ui/core/Button';
 import { makeStyles, Theme, createStyles } from '@material-ui/core/styles';
-import { Facebook as FacebookIcon } from 'mdi-material-ui'
+import FacebookIcon from 'mdi-material-ui/Facebook'
 
 const useStyles = makeStyles((theme: Theme) => createStyles({
     button: {
