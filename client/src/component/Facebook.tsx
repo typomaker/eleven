@@ -62,7 +62,7 @@ export default function Facebook(props: { appId: string, onLogin: (token: string
         js.addEventListener('load', onLoad);
         js.addEventListener('error', onError);
 
-        fjs.parentNode.insertBefore(js, fjs);
+        fjs.parentNode!.insertBefore(js, fjs);
 
         return () => {
             js.removeEventListener('load', onLoad);

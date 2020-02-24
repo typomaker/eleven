@@ -57,14 +57,14 @@ const recaptchaRef = React.createRef<ReCaptcha>();
 
 export default function Signin() {
     const classes = useStyles({});
-    const [email, setEmail] = useState({value: '', error: ''});
-    const [password, setPassword] = useState({value: '', error: '', visible: false});
-    const [recaptcha2, setRecaptcha2] = useState({value: '', checked: false, error: ''});
-    
+    const [email, setEmail] = useState({ value: '', error: '' });
+    const [password, setPassword] = useState({ value: '', error: '', visible: false });
+    const [recaptcha2, setRecaptcha2] = useState({ value: '', checked: false, error: '' });
+
     function switchPasswordVisibility() {
         setPassword(prev => ({ ...prev, visible: !prev.visible }));
     };
-    
+
     function onLogin(provider: 'facebook' | 'vkontakte') {
         return (token: string) => {
             console.log(provider, token);
@@ -79,31 +79,32 @@ export default function Signin() {
         event.persist();
         setPassword(prev => ({ ...prev, value: event.target.value }));
     }
-    function recaptcha2Change(event: React.ChangeEvent<HTMLInputElement>) {
-        if(event.target.checked){
-            recaptchaRef.current.execute();
-        }else{
-            recaptchaRef.current.reset();
+    function recaptcha2Change(event: React.ChangeEvent<{}>, checked: boolean): void {
+        const target = event.target as HTMLInputElement
+        if (target.checked) {
+            recaptchaRef.current!.execute();
+        } else {
+            recaptchaRef.current!.reset();
         }
-        setRecaptcha2({ checked: event.target.checked, error:'', value: ''});
+        setRecaptcha2({ checked: target.checked, error: '', value: '' });
     };
-    function recaptcha2Confirmed(value: string) {
+    function recaptcha2Confirmed(token: string | null): void {
         setRecaptcha2({
-            value,
+            value: token ?? "",
             checked: true,
-            error: '',
+            error: "",
         });
     };
     function onFailure(err: string) {
         console.error(err);
     }
-    
+
     return (
         <Container component="main" maxWidth="xs">
             <div className={classes.paper}>
                 <Slide direction="down" in mountOnEnter unmountOnExit>
                     <Avatar className={classes.avatar}>
-                        <LockIcon fontSize={'large'}/>
+                        <LockIcon fontSize={'large'} />
                     </Avatar>
                 </Slide>
                 <form className={classes.form}>
@@ -155,7 +156,7 @@ export default function Signin() {
                             control={<Checkbox
                                 color="primary"
                                 icon={
-                                    recaptcha2.value === '' && recaptcha2.checked 
+                                    recaptcha2.value === '' && recaptcha2.checked
                                         ? <CircularProgress size={24} />
                                         : undefined
                                 }
@@ -176,7 +177,7 @@ export default function Signin() {
                             >
                                 Confirm
                         </Button>
-                            <Facebook appId={process.env.FACEBOOK_ID} onLogin={onLogin('facebook')} onFailure={onFailure} />
+                            <Facebook appId={process.env.FACEBOOK_ID!} onLogin={onLogin('facebook')} onFailure={onFailure} />
                         </div>
                     </Slide>
                 </form>

@@ -1,8 +1,6 @@
 import React from 'react';
-import Checkbox from '@material-ui/core/Checkbox';
-import { createMuiTheme, makeStyles } from '@material-ui/core/styles';
-import { ThemeProvider } from '@material-ui/styles';
-import { orange } from '@material-ui/core/colors';
+import createMuiTheme from '@material-ui/core/styles/createMuiTheme';
+import ThemeProvider from '@material-ui/styles/ThemeProvider';
 
 const theme = createMuiTheme({
     palette: {
@@ -10,7 +8,7 @@ const theme = createMuiTheme({
     }
 });
 
-export default function Theme({children}:React.Props<{}>) {
+export default function Theme({ children }: React.Props<{}>) {
     return (
         <ThemeProvider theme={theme}>
             {children}

@@ -1,6 +1,8 @@
-import React, {useEffect, useState} from 'react';
+import React, { useEffect, useState } from 'react';
 import Button from '@material-ui/core/Button';
-import { makeStyles, Theme, createStyles } from '@material-ui/core/styles';
+import makeStyles from '@material-ui/core/styles/makeStyles';
+import type { Theme } from '@material-ui/core/styles';
+import createStyles from '@material-ui/core/styles/createStyles';
 import { Vk as VkIcon } from 'mdi-material-ui'
 
 const useStyles = makeStyles((theme: Theme) => createStyles({
@@ -50,7 +52,7 @@ export default function Vk(props: { appId: string, onLogin: (token: string) => v
         js.addEventListener('load', onLoad);
         js.addEventListener('error', onError);
 
-        fjs.parentNode.insertBefore(js, fjs);
+        fjs.parentNode!.insertBefore(js, fjs);
 
         return () => {
             js.removeEventListener('load', onLoad);
