@@ -13,12 +13,14 @@ services:
     build:
       context: client
   nginx:
+    restart: unless-stopped
     build:
       context: nginx
     ports:
       - 80:80
       - 443:443
   nats:
+    restart: unless-stopped
     build:
       context: nats
   gateway:
