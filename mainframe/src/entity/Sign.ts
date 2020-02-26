@@ -5,8 +5,8 @@ export type Property = Pick<Entity, "type" | "data" | "owner"> & Partial<Pick<En
 
 export class Entity {
   public readonly id: string;
-  readonly type: Entity.Type;
-  readonly data: string;
+  public readonly type: Entity.Type;
+  public readonly data: string;
   public readonly created: Date;
   public readonly owner: Account;
   constructor(p: Property) {
@@ -18,7 +18,7 @@ export class Entity {
   }
 }
 export namespace Entity {
-  export type Type = "facebook" | "password"
+  export type Type = "facebook" | "password";
   export namespace Kind {
     export function is(v: any): v is Type {
       return typeof v === "string" && validator.isIn(v, ["facebook", "password"]);
