@@ -6,7 +6,7 @@ type Filter = (
   | ["&" | "|", Filter[]]
   | ["=", "id", entity.Email["id"]]
   | ["=", "address", entity.Email["address"]]
-  | ["=", "isConfirmed", boolean]
+  | ["=", "confirmed", boolean]
   | ["=", "owner", entity.Email["owner"]["id"]]
   | ["in", "id", Array<entity.Email["id"]>]
 );
@@ -17,7 +17,7 @@ namespace Filter {
       case "=": switch (st[1]) {
         case "id": return `id=${pg.Client.prototype.escapeLiteral(st[2])}`;
         case "address": return `address=${pg.Client.prototype.escapeLiteral(st[2])}`;
-        case "isConfirmed": return `confirmed IS ${st[2] ? 'NOT NULL' : 'NULL'}`;
+        case "confirmed": return `confirmed IS ${st[2] ? 'NOT NULL' : 'NULL'}`;
         case "owner": return `owner=${pg.Client.prototype.escapeLiteral(st[2])}`
       }
       case "in": switch (st[1]) {
@@ -47,8 +47,8 @@ export class Email {
       private _limit: number | undefined;
       private _skip: number | undefined;
       constructor(private readonly repository: Email) { }
-      public isConfirmed(n: boolean = true): Reader {
-        return this.filter(["=", "isConfirmed", n]);
+      public confirmed(n: boolean = true): Reader {
+        return this.filter(["=", "confirmed", n]);
       }
       public id(n: entity.Email["id"] | Array<entity.Email["id"]>): Reader {
         if (Array.isArray(n)) return this.filter(["in", "id", n]);
