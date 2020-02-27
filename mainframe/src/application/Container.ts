@@ -8,41 +8,41 @@ import Server from "./Server";
 class Container {
   constructor(private readonly config: Container.Configuration) { }
 
-  private _log?: Logger
+  #log?: Logger
   public get log() {
-    if (this._log) return this._log;
-    return this._log = new Logger();
+    if (this.#log) return this.#log;
+    return this.#log = new Logger();
   }
-  private _password?: Password;
+  #password?: Password;
   public get password() {
-    if (this._password) return this._password;
-    return this._password = new Password(this.config.password)
+    if (this.#password) return this.#password;
+    return this.#password = new Password(this.config.password)
   }
-  private _pg?: pg.Pool;
+  #pg?: pg.Pool;
   public get pg() {
-    if (this._pg) return this._pg;
-    return this._pg = new pg.Pool(this.config.pg)
+    if (this.#pg) return this.#pg;
+    return this.#pg = new pg.Pool(this.config.pg)
       .on("error", (err) => this.log.error("Unexpected error on idle client", err));
   }
-  private _storage?: Storage;
+  #storage?: Storage;
   public get storage() {
-    if (this._storage) return this._storage;
-    return this._storage = new Storage(this.pg);
+    if (this.#storage) return this.#storage;
+    return this.#storage = new Storage(this.pg);
   }
-  private _account?: Account;
+  #account?: Account;
   public get account() {
-    if (this._account) return this._account;
-    return this._account = new Account(this);
+    if (this.#account) return this.#account;
+    return this.#account = new Account(this);
   }
-  private _recaptcha2?: Recaptcha2;
+  #recaptcha2?: Recaptcha2;
   public get recaptcha2() {
-    if (this._recaptcha2) return this._recaptcha2;
-    return this._recaptcha2 = new Recaptcha2(this.config.recaptcha2);
+    if (this.#recaptcha2) return this.#recaptcha2;
+    return this.#recaptcha2 = new Recaptcha2(this.config.recaptcha2);
   }
-  private _server?: Server
+  #server?: Server
   public get server() {
-    if (this._server) return this._server;
-    return this._server = new Server(this);
+    if (this.#server) return this.#server;
+    return this.#server = new Server(this);
   }
 }
 namespace Container {
