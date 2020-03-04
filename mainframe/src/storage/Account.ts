@@ -27,7 +27,7 @@ export class Account {
   private make(rows: any[]): entity.Account[] {
     return rows.map((row) => this.stash.get(row.id, () => new entity.Account({
       id: String(row.id),
-      avatar: String(row.avatar),
+      avatar: row.avatar ? String(row.avatar) : null,
       created: new Date(row.created),
       name: String(row.name)
     })));

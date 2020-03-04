@@ -31,9 +31,9 @@ namespace Message {
     return { type: "Success" }
   }
 
-  export type Token = { type: "Token", payload: { id: string, expired?: Date } }
+  export type Token = { type: "Token", payload: { id: string, account: string, expired?: Date } }
   export function Token(token: entity.Token): Token {
-    return { type: "Token", payload: { id: token.id, expired: token.expired ?? undefined } }
+    return { type: "Token", payload: { id: token.id, account: token.owner.id, expired: token.expired ?? undefined } }
   }
   export namespace Token {
     export type Create = { type: "Token:create", payload: { type: "password" | "facebook", data: string, email: string } }
@@ -49,25 +49,25 @@ namespace Message {
         return true
       }
     }
-    export type Delete = { type: "Token:delete", payload: { token: string } }
+    export type Delete = { type: "Token:delete", payload: { id: string } }
     export function Delete(payload: Delete["payload"]): Delete {
       return { type: "Token:delete", payload }
     }
     export namespace Delete {
       export function is(target: Delete | any): target is Delete {
         if (target?.type !== "Token:delete") return false
-        if (validator.isEmpty(target?.token)) return false
+        if (!validator.isUUID(target?.id ?? "")) return false
         return true;
       }
     }
-    export type Get = { type: "Token:get", payload: { token: string } }
+    export type Get = { type: "Token:get", payload: { id: string } }
     export function Get(payload: Get["payload"]): Get {
       return { type: "Token:get", payload }
     }
     export namespace Get {
       export function is(target: Get | any): target is Get {
         if (target?.type !== "Token:get") return false
-        if (validator.isEmpty(target?.token)) return false
+        if (!validator.isUUID(target?.id ?? "")) return false
         return true;
       }
     }
@@ -82,6 +82,14 @@ namespace Message {
     export type Get = { type: "Account:get", payload: { id: string, token: string } }
     export function Get(payload: Get["payload"]): Get {
       return { type: "Account:get", payload }
+    }
+    export namespace Get {
+      export function is(target: Get | any): target is Get {
+        if (target?.type !== "Account:get") return false
+        if (!validator.isUUID(target?.payload?.id ?? "")) return false
+        if (!validator.isUUID(target?.payload?.token ?? "")) return false
+        return true;
+      }
     }
   }
 }
@@ -111,11 +119,15 @@ class Server {
           break;
         }
         case "Token:delete": {
-          res = Message.Token.Delete.is(req) ? Message.Token(await this.container.account.signout(req.payload.token)) : Message.Failure.Invalid;
+          res = Message.Token.Delete.is(req) ? Message.Token(await this.container.account.signout(req.payload)) : Message.Failure.Invalid;
           break;
         }
         case "Token:get": {
-          res = Message.Token.Get.is(req) ? Message.Token(await this.container.account.authorize(req.payload.token)) : Message.Failure.Invalid;
+          res = Message.Token.Get.is(req) ? Message.Token(await this.container.account.authorize(req.payload)) : Message.Failure.Invalid;
+          break;
+        }
+        case "Account:get": {
+          res = Message.Account.Get.is(req) ? Message.Account(await this.container.account.get(req.payload)) : Message.Failure.Invalid;
           break;
         }
       }

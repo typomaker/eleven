@@ -4,29 +4,29 @@ import Container from "./Container";
 
 class Account {
   constructor(private readonly container: Container) { }
-  public async signin(p: Account.Credential): Promise<entity.Token> {
+  public async signin(value: { type: "facebook" | "password", data: string, email: string, ip?: string }): Promise<entity.Token> {
     let token: entity.Token;
-    switch (p.type) {
+    switch (value.type) {
       case "password": {
-        let email = await this.container.storage.email.read().address(p.email).one()
+        let email = await this.container.storage.email.read().address(value.email).one()
         let sign: entity.Sign | null
         if (!email) {
-          const owner = new entity.Account({ name: p.email.split("@")[0] });
+          const owner = new entity.Account({ name: value.email.split("@")[0] });
           await this.container.storage.account.save(owner);
-          email = new entity.Email({ address: p.email, owner })
+          email = new entity.Email({ address: value.email, owner })
           await this.container.storage.email.save(email);
-          sign = new entity.Sign({ type: "password", data: await this.container.password.hash(p.data), owner: owner });
+          sign = new entity.Sign({ type: "password", data: await this.container.password.hash(value.data), owner: owner });
           await this.container.storage.sign.save(sign);
         } else {
           sign = await this.container.storage.sign.read().type("password").owner(email.owner).one();
           if (!sign) throw new Account.Error("SignNotExist");
-          if (!await this.container.password.compare(p.data, sign.data)) throw new Account.Error("InvalidPassword");
+          if (!await this.container.password.compare(value.data, sign.data)) throw new Account.Error("InvalidPassword");
         }
-        token = new entity.Token({ owner: sign.owner, sign, ip: p.ip });
+        token = new entity.Token({ owner: sign.owner, sign, ip: value.ip });
         break;
       }
       case "facebook": {
-        const fb = await axios.get(`https://graph.facebook.com/v4.0/me`, { params: { access_token: p.data, fields: "id,email,name" } });
+        const fb = await axios.get(`https://graph.facebook.com/v4.0/me`, { params: { access_token: value.data, fields: "id,email,name" } });
         let sign = await this.container.storage.sign.read().type("facebook").data(fb.data.id).one();
         if (!sign) {
           if (fb.data.email) {
@@ -55,7 +55,7 @@ class Account {
           }
         }
         await this.container.storage.sign.save(sign);
-        token = new entity.Token({ owner: sign.owner, sign, ip: p.ip });
+        token = new entity.Token({ owner: sign.owner, sign, ip: value.ip });
         break;
       }
     }
@@ -63,15 +63,14 @@ class Account {
     await this.container.storage.token.save(token);
     return token;
   }
-  public async signout(id: entity.Token["id"]): Promise<entity.Token> {
-    const token = await this.container.account.authorize(id);
+  public async signout(value: { id: string }): Promise<entity.Token> {
+    const token = await this.container.account.authorize(value);
     if (!token) throw new Account.Error("NotExist");
     await this.container.storage.token.delete(token);
-
     return token;
   }
-  public async authorize(id: entity.Token["id"]): Promise<entity.Token> {
-    const token = await this.container.storage.token.get(id);
+  public async authorize(value: { id: string }): Promise<entity.Token> {
+    const token = await this.container.storage.token.get(value.id);
     if (!token) throw new Account.Error("NotExist");
     if (token.isDeleted) throw new Account.Error("Deleted");
     if (token.isExpired) {
@@ -80,25 +79,16 @@ class Account {
     }
     return token;
   }
+  public async get(value: { id: string, token: string }): Promise<entity.Account> {
+    this.authorize({ id: value.token });
+    const entity = await this.container.storage.account.get(value.id);
+    if (!entity) throw new Account.Error("AccountNotExist");
+    return entity;
+  }
 }
 const BaseError = Error;
 namespace Account {
   export class Error extends BaseError { }
-  export type Credential = {
-    type: "facebook" | "password"
-    data: string
-    email: string
-    ip?: string
-  };
-  export namespace Creadential {
-    export function is(v: any | Credential): v is Credential {
-      if (!entity.Sign.Kind.is(v?.type)) return false;
-      if (typeof v.token !== "string") return false
-      if (typeof v.email !== "string") return false
-      if (v.ip && typeof v.ip !== "string") return false;
-      return true;
-    }
-  }
 }
 
 export default Account;

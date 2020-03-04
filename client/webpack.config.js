@@ -48,11 +48,7 @@ module.exports = {
             filename: "index.html",
             template: 'src/index.html',
         }),
-        new webpack.EnvironmentPlugin({
-            NODE_ENV: process.env.NODE_ENV,
-            DOMAIN: process.env.DOMAIN,
-            FACEBOOK_ID: process.env.FACEBOOK_ID,
-        }),
+        new webpack.EnvironmentPlugin(["NODE_ENV", "DOMAIN", "FACEBOOK_ID", "RECAPTHCA2_APP_ID"]),
     ],
     devServer: {
         public: process.env.DOMAIN,
