@@ -36,7 +36,7 @@ class WSocket {
   private readonly subscribers = new Set<Subscriber>();
   constructor(public readonly host: string) { }
   private connect(): WebSocket {
-    const ws = new WebSocket(`gateway.${this.host}`)
+    const ws = new WebSocket(`server.${this.host}`)
     ws.onopen = (e) => {
       console.log('[WSocket] connected: ', e)
     }

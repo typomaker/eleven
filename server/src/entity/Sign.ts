@@ -1,6 +1,6 @@
 import uuid from "uuid/v4";
 import validator from "validator";
-import { Account } from ".";
+import { Account } from "../entity";
 export type Property = Pick<Entity, "type" | "data" | "owner"> & Partial<Pick<Entity, "id" | "created">>;
 
 export class Entity {

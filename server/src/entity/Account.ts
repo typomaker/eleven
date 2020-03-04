@@ -1,5 +1,5 @@
 import uuid from "uuid/v4";
-import { Email } from ".";
+import { Email } from "../entity";
 
 export class Entity {
   public id: string;

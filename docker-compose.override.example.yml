@@ -1,9 +1,9 @@
 version: '3.7'
 
 services:
-  api:
+  server:
     volumes:
-      - ./mainframe:/app
+      - ./server:/server
     env_file:
       - .env
     ports:
@@ -28,8 +28,3 @@ services:
       - ./nginx/ssl:/ssl:rw
       - ./nginx/conf.d/:/conf.d/:ro
       - ./nginx/entrypoint.sh:/entrypoint.sh:ro
-  gateway:
-    build:
-      target: development
-    volumes:
-      - ./gateway:/go/src/gateway:rw

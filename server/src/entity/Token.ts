@@ -1,5 +1,5 @@
 import uuid from "uuid/v4";
-import { Account, Sign } from ".";
+import { Account, Sign } from "../entity";
 
 type Property = Pick<Entity, "owner" | "sign"> & Partial<Pick<Entity, "ip" | "id" | "created" | "updated" | "deleted" | "expired">>;
 export class Entity {
@@ -10,7 +10,7 @@ export class Entity {
   public deleted: Date | null;
   public expired: Date | null;
   public readonly owner: Account;
-  public readonly sign: Sign | null
+  public readonly sign: Sign | null;
   constructor(p: Property) {
     const now = new Date();
     this.id = p.id ?? uuid();

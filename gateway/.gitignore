@@ -1,5 +1,0 @@
-bin
-pkg
-docker-compose.override.yml
-tmp
-vendor

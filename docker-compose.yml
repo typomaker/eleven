@@ -1,9 +1,9 @@
 version: '3.7'
 
 services:
-  mainframe:
+  server:
     build:
-      context: mainframe
+      context: server
     restart: unless-stopped
   postgres:
     build:
@@ -19,13 +19,3 @@ services:
     ports:
       - 80:80
       - 443:443
-  nats:
-    restart: unless-stopped
-    build:
-      context: nats
-  gateway:
-    restart: unless-stopped
-    build:
-      context: gateway
-      target: production
-
