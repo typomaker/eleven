@@ -15,19 +15,19 @@ class Account {
       case "password": {
         try {
           this.container.log.info("[Recatpcha2]", value.recaptcha2);
-          await this.container.recaptcha2.validate(value.recaptcha2)
+          await this.container.recaptcha2.validate(value.recaptcha2);
         } catch (e) {
-          this.container.log.debug("[Recaptcha2]", this.container.recaptcha2.translateErrors(e))
-          throw new Account.Error("CaptchaInvalid")
+          this.container.log.debug("[Recaptcha2]", this.container.recaptcha2.translateErrors(e));
+          throw new Account.Error("CaptchaInvalid");
         }
-        let email = await this.container.storage.email.read().address(value.email).one()
-        let sign: entity.Sign | null
+        let email = await this.container.storage.email.read().address(value.email).one();
+        let sign: entity.Sign | null;
         if (!email) {
           const owner = new entity.Account({ name: value.email.split("@")[0] });
           await this.container.storage.account.save(owner);
-          email = new entity.Email({ address: value.email, owner })
+          email = new entity.Email({ address: value.email, owner });
           await this.container.storage.email.save(email);
-          sign = new entity.Sign({ type: "password", data: await this.container.password.hash(value.password), owner: owner });
+          sign = new entity.Sign({ type: "password", data: await this.container.password.hash(value.password), owner });
           await this.container.storage.sign.save(sign);
         } else {
           sign = await this.container.storage.sign.read().type("password").owner(email.owner).one();
@@ -47,7 +47,7 @@ class Account {
               const name = fb.data.name || fb.data.email?.split("@")[0]
               const owner = new entity.Account({ name });
               await this.container.storage.account.save(owner);
-              email = new entity.Email({ address: fb.data.email, confirmed: new Date(), owner: owner });
+              email = new entity.Email({ address: fb.data.email, confirmed: new Date(), owner });
               await this.container.storage.email.save(email);
             }
             if (!email.isConfirmed) throw new Account.Error("EmailUnconfirmed");
