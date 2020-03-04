@@ -20,4 +20,4 @@ const app = new Application({
   },
 });
 
-app.server.connect();
+app.wsocket.start();

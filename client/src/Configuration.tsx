@@ -8,7 +8,7 @@ interface Configuration {
 
 namespace Configuration {
     const defaultValue = {
-        language: navigator.language ?? "ru",
+        language: navigator.language ?? "ru-RU",
         domain: process.env.DOMAIN!,
         set: () => { }
     }

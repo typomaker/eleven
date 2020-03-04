@@ -8,12 +8,11 @@ if [[ "$ENV" == "development" ]]; then
       echo "Creating /ssl/certs"
       mkdir -p /ssl/certs
     fi
-    if [[ -f /ssl/certs/server.key ]]; then
-      KEY_OPT="-key"
-    else
+    if [[ ! -f /ssl/certs/server.key ]]; then
+      # KEY_OPT="-key"
+    #else
       KEY_OPT="-keyout"
-    fi
-    openssl req \
+      openssl req \
         -x509 \
         -newkey rsa:4096 \
         -sha256 \
@@ -28,6 +27,7 @@ if [[ "$ENV" == "development" ]]; then
         echo "subjectAltName=DNS:${DOMAIN},DNS:server.${DOMAIN}" \
         ) \
         -subj "/CN=${DOMAIN}"
+    fi
 fi
 
 for f in $(find /conf.d/ -regex '.*\.conf'); do

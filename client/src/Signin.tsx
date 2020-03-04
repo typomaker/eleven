@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import Button from '@material-ui/core/Button';
 import { makeStyles, Theme, createStyles } from '@material-ui/core/styles';
 import Container from '@material-ui/core/Container';
@@ -12,13 +12,13 @@ import Checkbox from '@material-ui/core/Checkbox';
 import TextField from '@material-ui/core/TextField';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import LockIcon from '@material-ui/icons/LockOutlined';
-import Typography from '@material-ui/core/Typography';
 import InputAdornment from '@material-ui/core/InputAdornment';
 import IconButton from '@material-ui/core/IconButton';
 import Visibility from '@material-ui/icons/Visibility';
 import VisibilityOff from '@material-ui/icons/VisibilityOff';
 import Slide from '@material-ui/core/Slide';
-
+import WSocket from './WSocket';
+import validator from 'validator';
 
 const useStyles = makeStyles((theme: Theme) => createStyles({
     paper: {
@@ -56,28 +56,46 @@ const useStyles = makeStyles((theme: Theme) => createStyles({
 const recaptchaRef = React.createRef<ReCaptcha>();
 
 export default function Signin() {
+    const wsocket = useContext(WSocket.Context);
     const classes = useStyles({});
     const [email, setEmail] = useState({ value: '', error: '' });
     const [password, setPassword] = useState({ value: '', error: '', visible: false });
     const [recaptcha2, setRecaptcha2] = useState({ value: '', checked: false, error: '' });
 
+    useEffect(() => {
+        function message(value: WSocket.Message) {
+            console.log("[Signin]", value);
+        }
+        console.log("[Signin]", "Subscribe");
+        wsocket.subscribe(message)
+        return () => {
+            console.log("[Signin]", "Unsubscribe");
+            wsocket.unsubscribe(message);
+        }
+    }, [wsocket]);
+
     function switchPasswordVisibility() {
         setPassword(prev => ({ ...prev, visible: !prev.visible }));
     };
-
-    function onLogin(provider: 'facebook' | 'vkontakte') {
-        return (token: string) => {
-            console.log(provider, token);
+    function onConfirm() {
+        return () => {
+            if (validate()) {
+                wsocket.send({ type: "signin", payload: { type: "password", password: password.value, email: email.value, recaptcha2: recaptcha2.value } })
+            }
         }
     }
-
+    function onLogin() {
+        return (token: string) => {
+            wsocket.send({ type: "signin", payload: { type: "facebook", token } })
+        }
+    }
     function emailChange(event: React.ChangeEvent<HTMLInputElement>) {
         event.persist();
-        setEmail(prev => ({ ...prev, value: event.target.value }));
+        setEmail(prev => ({ ...prev, value: event.target.value, error: '' }));
     }
     function passwordChange(event: React.ChangeEvent<HTMLInputElement>) {
         event.persist();
-        setPassword(prev => ({ ...prev, value: event.target.value }));
+        setPassword(prev => ({ ...prev, value: event.target.value, error: '' }));
     }
     function recaptcha2Change(event: React.ChangeEvent<{}>, checked: boolean): void {
         const target = event.target as HTMLInputElement
@@ -98,7 +116,24 @@ export default function Signin() {
     function onFailure(err: string) {
         console.error(err);
     }
-
+    function validate() {
+        let valid = true;
+        if (validator.isEmpty(email.value)) {
+            setEmail({ ...email, error: "Введите email" })
+        } else if (!validator.isEmail(email.value)) {
+            valid = false;
+            setEmail({ ...email, error: "Введите корректный email" })
+        }
+        if (validator.isEmpty(password.value)) {
+            valid = false;
+            setPassword({ ...password, error: "Придумайте пароль" })
+        }
+        if (validator.isEmpty(recaptcha2.value)) {
+            valid = false;
+            setRecaptcha2({ ...recaptcha2, error: "Подтвердите что вы не робот" })
+        }
+        return valid;
+    }
     return (
         <Container component="main" maxWidth="xs">
             <div className={classes.paper}>
@@ -111,16 +146,17 @@ export default function Signin() {
                     <TextField
                         fullWidth
                         autoFocus
-                        label="Email address"
+                        label="Email"
                         name={"email"}
                         value={email.value}
                         onChange={emailChange}
                         margin="normal"
                         helperText={email.error}
                         error={!!email.error}
+                        autoComplete={"off"}
                     />
                     <TextField
-                        label="Password"
+                        label="Пароль"
                         name={"password"}
                         type={password.visible ? 'text' : 'password'}
                         value={password.value}
@@ -161,7 +197,7 @@ export default function Signin() {
                                         : undefined
                                 }
                             />}
-                            label="I'm not a robot"
+                            label="Я не робот"
                             checked={recaptcha2.value !== '' && recaptcha2.checked}
                         />
                         <FormHelperText>{recaptcha2.error}</FormHelperText>
@@ -169,15 +205,17 @@ export default function Signin() {
                     <Slide direction="up" in mountOnEnter unmountOnExit>
                         <div>
                             <Button
-                                type="submit"
+                                type="button"
                                 fullWidth
                                 variant="contained"
                                 color="primary"
                                 className={classes.submit}
+                                onClick={onConfirm()}
+                                disabled={email.value === "" || password.value === "" || recaptcha2.value === ""}
                             >
-                                Confirm
+                                Подтвердить
                         </Button>
-                            <Facebook appId={process.env.FACEBOOK_ID!} onLogin={onLogin('facebook')} onFailure={onFailure} />
+                            <Facebook appId={process.env.FACEBOOK_ID!} onLogin={onLogin()} onFailure={onFailure} />
                         </div>
                     </Slide>
                 </form>

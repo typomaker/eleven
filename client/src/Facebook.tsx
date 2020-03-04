@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Button from '@material-ui/core/Button';
 import { makeStyles, Theme, createStyles } from '@material-ui/core/styles';
-import FacebookIcon from 'mdi-material-ui/Facebook'
 
 const useStyles = makeStyles((theme: Theme) => createStyles({
     button: {
@@ -81,7 +80,7 @@ export default function Facebook(props: { appId: string, onLogin: (token: string
             disabled={!loaded}
             onClick={runLogin}
         >
-            <FacebookIcon />
+            FACEBOOK
         </Button>
     )
 }

@@ -3,6 +3,7 @@ import CssBaseline from "@material-ui/core/CssBaseline";
 import Signin from './Signin';
 import Theme from './Theme';
 import Configuration from "./Configuration"
+import WSocket from "./WSocket";
 
 export default class App extends React.Component {
     public render(): React.ReactNode {
@@ -10,8 +11,10 @@ export default class App extends React.Component {
             <>
                 <Theme>
                     <CssBaseline />
-                    <Configuration.Provider language={navigator.language} domain={process.env.DOMAIN}>
-                        <Signin />
+                    <Configuration.Provider>
+                        <WSocket.Provider>
+                            <Signin />
+                        </WSocket.Provider>
                     </Configuration.Provider>
                 </Theme>
             </>

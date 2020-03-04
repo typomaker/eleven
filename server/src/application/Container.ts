@@ -4,7 +4,7 @@ import Storage from "../storage";
 import Account from "./Account";
 import Logger from "./Logger";
 import Password from "./Password";
-import Server from "./Server";
+import WSocket from "./WSocket";
 class Container {
   constructor(private readonly config: Container.Configuration) { }
 
@@ -39,10 +39,10 @@ class Container {
     if (this.#recaptcha2) return this.#recaptcha2;
     return this.#recaptcha2 = new Recaptcha2(this.config.recaptcha2);
   }
-  #server?: Server
-  public get server() {
-    if (this.#server) return this.#server;
-    return this.#server = new Server(this);
+  #wsocket?: WSocket
+  public get wsocket() {
+    if (this.#wsocket) return this.#wsocket;
+    return this.#wsocket = new WSocket(this);
   }
 }
 namespace Container {
