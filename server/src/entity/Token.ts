@@ -1,7 +1,7 @@
 import uuid from "uuid/v4";
 import { Account, Sign } from "../entity";
 
-type Property = Pick<Entity, "owner" | "sign"> & Partial<Pick<Entity, "ip" | "id" | "created" | "updated" | "deleted" | "expired">>;
+type Property = Pick<Entity, "owner"> & Partial<Pick<Entity, "ip" | "id" | "created" | "updated" | "deleted" | "expired" | "sign">>;
 export class Entity {
   public readonly id: string;
   public ip: string | null;
@@ -26,7 +26,9 @@ export class Entity {
   public get isDeleted() {
     return this.deleted !== null;
   }
-
+  public set isDeleted(value: boolean) {
+    this.deleted = value ? (this.deleted ?? new Date()) : null;
+  }
   public get isExpired() {
     return this.expired !== null && this.expired.getTime() < new Date().getTime();
   }
