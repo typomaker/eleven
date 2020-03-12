@@ -5,7 +5,11 @@
   ],
   "jsRules": {},
   "rules": {
+    "member-access": false,
+    "member-ordering": false,
+    "arrow-parens": false,
     "no-namespace": false,
+    "no-shadowed-variable": false,
     "interface-name": false,
     "max-classes-per-file": false,
     "object-literal-sort-keys": false,
