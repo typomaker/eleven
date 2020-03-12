@@ -27,19 +27,6 @@ namespace Filter {
 export class Sign {
   public readonly stash = new Stash<string, entity.Token>();
   constructor(private readonly context: Context) { }
-  private async make(rows: any[]): Promise<entity.Token[]> {
-    const owners = await this.context.account.get(rows.map((row) => row.owner));
-    const signs = await this.context.sign.get(rows.map((row) => row.sign).filter(Boolean));
-    return rows.map((row) => this.stash.get(row.id, () => new entity.Token({
-      id: String(row.id),
-      created: new Date(row.created),
-      ip: row.ip ? String(row.ip) : null,
-      sign: row.sign ? signs.get(row.sign)! : null,
-      owner: owners.get(row.owner)!,
-      deleted: row.deleted ? new Date(row.deleted) : null,
-      expired: row.expired ? new Date(row.expired) : null,
-    })));
-  }
   public async get(ids: entity.Token["id"]): Promise<entity.Token | null>;
   public async get(ids: Array<entity.Token["id"]>): Promise<Map<entity.Token["id"], entity.Token>>;
   public async get(id: Array<entity.Token["id"]> | entity.Token["id"]) {
@@ -53,10 +40,6 @@ export class Sign {
   }
   public read(filter?: Filter) {
     return new class Reader {
-      private _filter?: Filter = filter;
-      private _limit: number | undefined;
-      private _skip: number | undefined;
-      constructor(private readonly repository: Sign) { }
       private static build(e: Reader) {
         let query = "SELECT id, created, owner, updated, deleted, expired, ip, sign FROM account.token";
         if (e._filter) query += " WHERE " + Filter.build(e._filter);
@@ -64,6 +47,10 @@ export class Sign {
         if (e._skip) query += " OFFSET " + Number(e._skip);
         return query;
       }
+      private _filter?: Filter = filter;
+      private _limit: number | undefined;
+      private _skip: number | undefined;
+      constructor(private readonly repository: Sign) { }
       public isExpired(v: entity.Token["isExpired"] = true) {
         return this.filter(["=", "isExpired", v]);
       }
@@ -143,6 +130,19 @@ export class Sign {
     const sql = `UPDATE account.token SET deleted=${pg.Client.prototype.escapeLiteral(now.toISOString())} WHERE id IN(${tokens.map(token => pg.Client.prototype.escapeLiteral(token.id)).join(",")})`;
     await this.context.query(sql)
     tokens.forEach(token => token.deleted = now);
+  }
+  private async make(rows: any[]): Promise<entity.Token[]> {
+    const owners = await this.context.account.get(rows.map((row) => row.owner));
+    const signs = await this.context.sign.get(rows.map((row) => row.sign).filter(Boolean));
+    return rows.map((row) => this.stash.get(row.id, () => new entity.Token({
+      id: String(row.id),
+      created: new Date(row.created),
+      ip: row.ip ? String(row.ip) : null,
+      sign: row.sign ? signs.get(row.sign)! : null,
+      owner: owners.get(row.owner)!,
+      deleted: row.deleted ? new Date(row.deleted) : null,
+      expired: row.expired ? new Date(row.expired) : null,
+    })));
   }
 }
 export default Sign;
