@@ -1,24 +1,28 @@
 class Logger {
-  private static format(ns: string, message: string) {
-    return `[${ns}] ${message}`
+  constructor(private readonly tags: string[] = []) { }
+  public log(...message: any[]) {
+    console.log(this.tag("log").stringify(...message));
   }
-  public log(message: string, ...optional: any) {
-    console.log(Logger.format("error", message), ...optional);
+  public trace(...message: any[]) {
+    console.trace(this.tag("trace").stringify(...message));
   }
-  public trace(message: string, ...optional: any) {
-    console.trace(Logger.format("error", message), ...optional);
+  public info(...message: any[]) {
+    console.info(this.tag("info").stringify(...message));
   }
-  public info(message: string, ...optional: any) {
-    console.info(Logger.format("info", message), ...optional);
+  public error(...message: any[]) {
+    console.error(this.tag("error").stringify(...message));
   }
-  public error(message: string, ...optional: any) {
-    console.error(Logger.format("error", message), ...optional);
+  public warning(...message: any[]) {
+    console.warn(this.tag("warning").stringify(...message));
   }
-  public warning(message: string, ...optional: any) {
-    console.warn(Logger.format("warning", message), ...optional);
+  public debug(...message: any[]) {
+    console.debug(this.tag("debug").stringify(...message));
   }
-  public debug(message: string, ...optional: any) {
-    console.debug(Logger.format("debug", message), ...optional);
+  public tag(...name: any[]): Logger {
+    return new Logger([...this.tags, ...name]);
+  }
+  protected stringify(...message: any[]) {
+    return this.tags.map(tag => `[${tag}]`).join("") + message.join(" ").trim();
   }
 }
 
