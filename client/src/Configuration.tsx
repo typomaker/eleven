@@ -1,47 +1,30 @@
-import React from "react";
+import React, { useState } from "react";
 
 interface Configuration {
-    language: string
     domain: string
     set: (value: Omit<Configuration, "set">) => void
 }
 
 namespace Configuration {
-    const defaultValue = {
-        language: navigator.language ?? "ru-RU",
+    const initial = {
         domain: process.env.DOMAIN!,
         set: () => { }
     }
-    const Context = React.createContext<Configuration>(defaultValue);
+    export const Context = React.createContext<Configuration>(initial);
     Context.displayName = "Configuration";
 
-    type Props = Partial<Omit<Configuration, "set">>
-    type State = Required<Configuration>
     export const Consumer = Context.Consumer;
-    export class Provider extends React.Component<Props, State>{
-        constructor(props: Readonly<Props>) {
-            super(props);
-            this.state = {
-                ...defaultValue,
-                ...props,
-                set: (value) => this.setState({ ...this.state, ...value }),
-            };
-        }
+    export const Provider: React.FunctionComponent = ({ children }) => {
+        const [value, setValue] = useState<Configuration>({
+            ...initial,
+            set: (v) => setValue({ ...value, ...v })
+        });
 
-        render() {
-            return (
-                <Context.Provider value={this.state}>
-                    {this.props.children}
-                </Context.Provider>
-            )
-        }
-    }
-    export function wrap<P extends object>(Component: React.ComponentType<P>): React.FC<Omit<P, "configuration">> {
-        return (props) => (
-            <Consumer>
-                {(value) => <Component {...props as P} configuration={value} />}
-            </Consumer>
-        );
+        return (
+            <Context.Provider value={value}>
+                {children}
+            </Context.Provider>
+        )
     }
 }
 
