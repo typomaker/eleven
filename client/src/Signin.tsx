@@ -19,6 +19,7 @@ import VisibilityOff from '@material-ui/icons/VisibilityOff';
 import Slide from '@material-ui/core/Slide';
 import WSocket from './WSocket';
 import validator from 'validator';
+import Localization from "./Localization";
 
 const useStyles = makeStyles((theme: Theme) => createStyles({
     paper: {
@@ -57,22 +58,11 @@ const recaptchaRef = React.createRef<ReCaptcha>();
 
 export default function Signin() {
     const wsocket = useContext(WSocket.Context);
+    const localization = useContext(Localization.Context);
     const classes = useStyles({});
     const [email, setEmail] = useState({ value: '', error: '' });
     const [password, setPassword] = useState({ value: '', error: '', visible: false });
     const [recaptcha2, setRecaptcha2] = useState({ value: '', checked: false, error: '' });
-
-    useEffect(() => {
-        function message(value: WSocket.Message) {
-            console.log("[Signin]", value);
-        }
-        console.log("[Signin]", "Subscribe");
-        wsocket.subscribe(message)
-        return () => {
-            console.log("[Signin]", "Unsubscribe");
-            wsocket.unsubscribe(message);
-        }
-    }, [wsocket]);
 
     function switchPasswordVisibility() {
         setPassword(prev => ({ ...prev, visible: !prev.visible }));
@@ -146,7 +136,7 @@ export default function Signin() {
                     <TextField
                         fullWidth
                         autoFocus
-                        label="Email"
+                        label={localization.t?.email}
                         name={"email"}
                         value={email.value}
                         onChange={emailChange}
@@ -156,7 +146,7 @@ export default function Signin() {
                         autoComplete={"off"}
                     />
                     <TextField
-                        label="Пароль"
+                        label={localization.t?.password}
                         name={"password"}
                         type={password.visible ? 'text' : 'password'}
                         value={password.value}
@@ -197,7 +187,7 @@ export default function Signin() {
                                         : undefined
                                 }
                             />}
-                            label="Я не робот"
+                            label={localization.t?.imNotARobot}
                             checked={recaptcha2.value !== '' && recaptcha2.checked}
                         />
                         <FormHelperText>{recaptcha2.error}</FormHelperText>
@@ -213,8 +203,8 @@ export default function Signin() {
                                 onClick={onConfirm()}
                                 disabled={email.value === "" || password.value === "" || recaptcha2.value === ""}
                             >
-                                Подтвердить
-                        </Button>
+                                {localization.t?.signin}
+                            </Button>
                             <Facebook appId={process.env.FACEBOOK_ID!} onLogin={onLogin()} onFailure={onFailure} />
                         </div>
                     </Slide>
