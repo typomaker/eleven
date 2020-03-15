@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useContext, useEffect } from "react"
 import Configuration from "./Configuration";
 
 type Subscriber = (msg: WSocket.Message) => void
@@ -60,30 +60,27 @@ namespace WSocket {
   export const Context = React.createContext<WSocket>(WSocket.prototype);
   Context.displayName = "WSocket";
   export const Consumer = Context.Consumer;
-  export const Provider = Configuration.wrap(
-    class Provider extends React.Component<{ configuration: Configuration }> {
-      render() {
-        return (
-          <Context.Provider value={new WSocket(this.props.configuration.domain)}>
-            {this.props.children}
-          </Context.Provider>
-        )
-      }
-    }
-  )
-  export function wrap<P extends object>(Component: React.ComponentType<P>): React.FC<Omit<P, "wsocket">> {
-    return (props) => (
-      <Consumer>
-        {(value) => <Component {...props as P} wsocket={value} />}
-      </Consumer>
-    );
-  }
 
+  export const Provider: React.FunctionComponent = ({ children }) => {
+    const configuration = useContext(Configuration.Context);
+    return (
+      <Context.Provider value={new WSocket(configuration.domain)}>
+        {children}
+      </Context.Provider>
+    )
+  }
+  export const useMessage = function (cb: (msg: Message) => void) {
+    const wsocket = useContext(Context);
+    useEffect(() => {
+      wsocket.subscribe(cb)
+      return () => wsocket.unsubscribe(cb);
+    }, [wsocket]);
+  }
   export type Message = (
     | Message.Error
     | Message.Signin
-    | Message.Session
-    | Message.Session.Account
+    | Message.Token
+    | Message.Token.Account
   )
 
   export namespace Message {
@@ -94,15 +91,16 @@ namespace WSocket {
     export type Signin = {
       type: "signin",
       payload: (
+        | { type: "token", id: string }
         | { type: "facebook", token: string }
         | { type: "password", password: string, email: string, recaptcha2: string }
       )
     }
-    export type Session = {
+    export type Token = {
       type: "session",
-      payload: { id: string }
+      payload: { id: string, expired?: string }
     }
-    export namespace Session {
+    export namespace Token {
       export type Account = {
         type: "session.account",
         payload: { id: string, name: string, avatar: string }
