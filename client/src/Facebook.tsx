@@ -20,8 +20,8 @@ export default function Facebook(props: { appId: string, onLogin: (token: string
         if (r.status === 'connected') {
             props.onLogin(r.authResponse.accessToken);
             setToken(r.authResponse.accessToken);
-        } else {
-            props.onFailure(`error: status = ${r.status}`)
+        } else if (r.status !== 'unknown') {
+            props.onFailure(`error: status = ${r}`)
         }
     }
 
