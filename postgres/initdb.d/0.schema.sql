@@ -19,53 +19,61 @@ create table rbac.hierarchy (
   child varchar(256) not null references rbac.operation(id),
   primary key(parent, child)
 );
-create schema card;
-create table card.card (
+
+create schema equipment;
+create table equipment.card (
   id uuid primary key not null default uuid_generate_v4(),
   name varchar(256) not null references localization.word(id) on delete restrict on update cascade,
-  parent uuid default null references card.card(id) on delete restrict on update cascade,
   created timestamp with time zone not null default current_timestamp,
-  image text default null
+  quality int default null
 );
-create table card.combination (
+create table equipment.card_behavior(
+  id uuid primary key not null default uuid_generate_v4(),
+  card uuid not null references equipment.card(id) on delete cascade on update cascade,
+  source uuid not null references equipment.card(id) on delete restrict on update cascade,
+  unique (card, source)
+);
+create table equipment.card_combination (
   id uuid primary key not null default uuid_generate_v4(),
   card uuid not null references card.card(id) on delete cascade on update cascade,
   input uuid not null references card.card(id) on delete restrict on update cascade,
   output uuid not null references card.card(id) on delete restrict on update cascade,
   unique(card, input, output)
 );
-create schema deck;
-create table deck.deck (
+create table equipment.deck (
   id uuid primary key not null default uuid_generate_v4(),
-  created timestamp with time zone not null default current_timestamp,
-  name varchar(256) default null references localization.word(id) on delete restrict on update cascade
-);
-create table deck.element (
-  deck uuid not null references deck.deck(id) on delete cascade on update cascade,
-  card uuid not null references card.card(id) on delete cascade on update cascade,
-  position int not null check(position >= 0),
-  primary key(deck, card)
-);
-create schema booster;
-create table booster.booster (
-  id uuid primary key not null default uuid_generate_v4(),
-  created timestamp with time zone not null default current_timestamp,
   name varchar(256) default null references localization.word(id) on delete restrict on update cascade,
-  charge smallint not null check (charge > 0)
+  created timestamp with time zone not null default current_timestamp
 );
-create table booster.element (
+create table equipment.deck_card (
   id uuid primary key not null default uuid_generate_v4(),
-  booster uuid not null references booster.booster(id) on delete cascade on update cascade,
-  card uuid not null references card.card(id) on delete cascade on update cascade,
-  probability numeric(7, 6) check(
-    probability > 0
-    and probability <= 1
-  ),
-  unique(booster, card),
-  unique(booster, probability)
+  deck uuid not null references equipment.deck(id) on delete cascade on update cascade,
+  card uuid not null references equipment.card(id) on delete cascade on update cascade,
+  position int not null check(position >= 0),
+  unique(deck, card)
 );
+create table equipment.booster (
+  id uuid primary key not null default uuid_generate_v4(),
+  name varchar(256) default null references localization.word(id) on delete restrict on update cascade,
+  created timestamp with time zone not null default current_timestamp,
+  size smallint not null check (size > 0),
+  enumerator int not null default 1,
+);
+create table equipment.booster_card (
+  id uuid primary key not null default uuid_generate_v4(),
+  booster uuid not null references equipment.booster(id) on delete cascade on update cascade,
+  card uuid not null references card.card(id) on delete cascade on update cascade,
+  frequency int not null check (frequency > 0),
+  unique(booster, card)
+);
+
+create schema activity;
+create table activity.event (
+  id uuid primary key not null default uuid_generate_v4(),
+);
+
 create schema account;
-create table account.account (
+create table account.user (
   id uuid primary key not null default uuid_generate_v4(),
   created timestamp with time zone not null default current_timestamp,
   name varchar(256) default null,
@@ -78,7 +86,7 @@ create table account.email (
   confirmed timestamp with time zone default null,
   created timestamp with time zone not null default current_timestamp,
   deleted timestamp with time zone default null,
-  owner uuid not null references account.account(id) on delete cascade on update cascade
+  owner uuid not null references account.user(id) on delete cascade on update cascade
 );
 create type account.sign_type as enum('facebook', 'password');
 create table account.sign (
@@ -87,7 +95,7 @@ create table account.sign (
   data text not null,
   created timestamp with time zone not null default current_timestamp,
   deleted timestamp with time zone default null,
-  owner uuid default null references account.account(id) on delete cascade on update cascade
+  owner uuid default null references account.user(id) on delete cascade on update cascade
 );
 create table account.token (
   id uuid primary key not null default uuid_generate_v4(),
@@ -95,27 +103,26 @@ create table account.token (
   updated timestamp with time zone not null default current_timestamp,
   deleted timestamp with time zone default null,
   expired timestamp with time zone default null,
-  owner uuid not null references account.account(id) on delete cascade on update cascade,
+  owner uuid not null references account.user(id) on delete cascade on update cascade,
   ip inet default null,
   sign uuid default null references account.sign(id) on delete cascade on update cascade
 );
 create table account.card (
   id uuid primary key not null default uuid_generate_v4(),
-  instance uuid not null references card.card(id) on delete cascade on update cascade,
-  owner uuid not null references account.account(id) on delete cascade on update cascade,
+  source uuid not null references equipment.card(id) on delete restrict on update cascade,
+  owner uuid not null references account.user(id) on delete cascade on update cascade,
   created timestamp with time zone not null default current_timestamp,
-  quantity int not null default 1 check (quantity >= 1)
+  wear int default null
 );
 create table account.deck (
   id uuid primary key not null default uuid_generate_v4(),
-  instance uuid not null references deck.deck(id) on delete cascade on update cascade,
-  owner uuid not null references account.account(id) on delete cascade on update cascade,
-  created timestamp with time zone not null default current_timestamp,
-  name text
+  source uuid not null references equipment.deck(id) on delete restrict on update cascade,
+  owner uuid not null references account.user(id) on delete cascade on update cascade,
+  created timestamp with time zone not null default current_timestamp
 );
 create table account.booster (
   id uuid primary key not null default uuid_generate_v4(),
-  instance uuid not null references booster.booster(id) on delete cascade on update cascade,
-  owner uuid not null references account.account(id) on delete cascade on update cascade,
+  source uuid not null references equipment.booster(id) on delete restrict on update cascade,
+  owner uuid not null references account.user(id) on delete cascade on update cascade,
   created timestamp with time zone not null default current_timestamp
 );
