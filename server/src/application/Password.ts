@@ -16,9 +16,9 @@ class Password {
   }
 }
 namespace Password {
-  export type Configuration = {
-    salt: string,
-    rounds: number
+  export interface Configuration {
+    salt: string;
+    rounds: number;
   }
 }
 export default Password;

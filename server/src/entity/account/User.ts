@@ -1,7 +1,7 @@
-import uuid from "uuid/v4";
-import { Email } from "../entity";
+import Email from "./Email";
+import uuid from "./node_modules/uuid/v4";
 
-export class Entity {
+export class User {
   public id: string;
   public name: string;
   public avatar: string | null;
@@ -22,7 +22,7 @@ export class Entity {
     return this.deleted !== null;
   }
 }
-export type Property = Partial<Pick<Entity, (
+export type Property = Partial<Pick<User, (
   | "avatar"
   | "id"
   | "name"
@@ -30,4 +30,4 @@ export type Property = Partial<Pick<Entity, (
   | "emails"
   | "deleted"
 )>>;
-export default Entity;
+export default User;

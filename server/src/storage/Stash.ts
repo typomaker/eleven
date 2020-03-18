@@ -4,7 +4,7 @@ export class Stash<Id, Entity> {
   public get(id: Id): Entity | null;
   public get(id: Id, setter: () => Entity): Entity;
   public get(id: Id, setter?: () => Entity): Entity | null {
-    return this.data.get(id) ?? (setter ? this.set(id, setter()) : null)
+    return this.data.get(id) ?? (setter ? this.set(id, setter()) : null);
   }
   public set(id: Id, entity: Entity) {
     this.data.set(id, entity);

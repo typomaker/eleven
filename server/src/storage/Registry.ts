@@ -9,15 +9,6 @@ class Registry {
   public get account() {
     return this.context.account;
   }
-  public get email() {
-    return this.context.email;
-  }
-  public get sign() {
-    return this.context.sign;
-  }
-  public get token() {
-    return this.context.token;
-  }
 }
 
 export default Registry;

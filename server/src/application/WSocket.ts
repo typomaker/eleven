@@ -1,12 +1,12 @@
 import http from "http";
 import validator from "validator";
 import WebSocket from "ws";
-import * as entity from "../entity";
+import * as entity from "../entity/account";
 import Account from "./Account";
 import Container from "./Container";
 import Logger from "./Logger";
 class WSocket {
-  private pool = new Map<entity.Account["id"], Set<WebSocket>>();
+  private pool = new Map<entity.User["id"], Set<WebSocket>>();
   private server?: WebSocket.Server;
   private logger: Logger;
   constructor(private readonly container: Container) {
@@ -29,17 +29,17 @@ class WSocket {
       const text = WSocket.Message.stringify(msg);
       ws.send(text, e => this.logger.error(e));
     };
-    const send = (id: entity.Account["id"], msg: WSocket.Message) => {
+    const send = (id: entity.User["id"], msg: WSocket.Message) => {
       const text = WSocket.Message.stringify(msg);
       for (const ws of this.pool.get(id) ?? []) {
         ws.send(text, e => this.logger.error(e));
       }
     };
-    const register = (id: entity.Account["id"], ws: WebSocket) => {
+    const register = (id: entity.User["id"], ws: WebSocket) => {
       if (!this.pool.has(id)) this.pool.set(id, new Set());
       this.pool.get(id)!.add(ws);
     };
-    const unregister = (id: entity.Account["id"], ws: WebSocket) => {
+    const unregister = (id: entity.User["id"], ws: WebSocket) => {
       this.pool.get(id)?.delete(ws);
       if (this.pool.get(id)?.size === 0) this.pool.delete(id);
     };
@@ -160,7 +160,7 @@ namespace WSocket {
         payload: { id: string, name: string, avatar: string | null };
       }
       export namespace Account {
-        export function make(v: entity.Account): Account {
+        export function make(v: entity.User): Account {
           return { type: "session.account", payload: { id: v.id, avatar: v.avatar, name: v.name } };
         }
       }

@@ -1,15 +1,16 @@
-import uuid from "uuid/v4";
-import { Account, Sign } from "../entity";
+import uuid from "./node_modules/uuid/v4";
+import Sign from "./Sign";
+import User from "./User";
 
-type Property = Pick<Entity, "owner"> & Partial<Pick<Entity, "ip" | "id" | "created" | "updated" | "deleted" | "expired" | "sign">>;
-export class Entity {
+type Property = Pick<Token, "owner"> & Partial<Pick<Token, "ip" | "id" | "created" | "updated" | "deleted" | "expired" | "sign">>;
+export class Token {
   public readonly id: string;
   public ip: string | null;
   public readonly created: Date;
   public updated: Date;
   public deleted: Date | null;
   public expired: Date | null;
-  public readonly owner: Account;
+  public readonly owner: User;
   public readonly sign: Sign | null;
   constructor(p: Property) {
     const now = new Date();
@@ -34,4 +35,4 @@ export class Entity {
   }
 }
 
-export default Entity;
+export default Token;

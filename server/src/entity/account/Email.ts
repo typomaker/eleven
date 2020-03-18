@@ -1,16 +1,16 @@
-import uuid from "uuid/v4";
-import Account from "./Account";
+import uuid from "./node_modules/uuid/v4";
+import Account from "./User";
 
-export type Property = Pick<Entity, (
+export type Property = Pick<Email, (
   | "address"
   | "owner"
-)> & Partial<Pick<Entity, (
+)> & Partial<Pick<Email, (
   | "created"
   | "confirmed"
   | "deleted"
   | "id"
 )>>;
-export class Entity {
+export class Email {
   public readonly id: string;
   public readonly created: Date;
   public address: string;
@@ -36,4 +36,4 @@ export class Entity {
   }
 }
 
-export default Entity;
+export default Email;
