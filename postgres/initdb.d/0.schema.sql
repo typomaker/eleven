@@ -53,7 +53,7 @@ create schema equipment;
 
 create table equipment.deck(
   id uuid primary key not null default uuid_generate_v4(),
-  origin uuid default null references equipment.card(id) on delete cascade on update cascade,
+  origin uuid default null references equipment.deck(id) on delete cascade on update cascade,
   name varchar(256) default null references localization.word(id) on delete restrict on update cascade,
   account uuid not null references account.user(id) on delete cascade on update cascade,
   is_basic boolean not null default false,
@@ -110,7 +110,7 @@ create index on activity.event(deleted);
 
 create table activity.environment(
   id uuid primary key not null default uuid_generate_v4(),
-  event uuid not null references equipment.event(id) on delete cascade on update cascade,
+  event uuid not null references activity.event(id) on delete cascade on update cascade,
   card uuid not null references equipment.card(id) on delete restrict on update cascade,
   created timestamp with time zone not null default current_timestamp,
   deleted timestamp with time zone default null
@@ -154,8 +154,8 @@ create table activity.turn(
   party uuid not null references activity.party(id) on delete cascade on update cascade,
   member uuid not null references activity.member(id) on delete cascade on update cascade,
   target uuid default null references equipment.card(id) on delete restrict on update cascade,
-  from uuid default null references equipment.card(id) on delete restrict on update cascade,
-  to uuid default null references equipment.card(id) on delete restrict on update cascade,
+  "from" uuid default null references equipment.card(id) on delete restrict on update cascade,
+  "to" uuid default null references equipment.card(id) on delete restrict on update cascade,
   created timestamp with time zone not null default current_timestamp,
   completed timestamp with time zone default null
 );
