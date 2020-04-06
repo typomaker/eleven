@@ -1,7 +1,6 @@
 import uuid from "uuid/v4";
 import validator from "validator";
 import Account from "./User";
-export type Property = Pick<Sign, "type" | "data" | "owner"> & Partial<Pick<Sign, "id" | "created">>;
 
 export class Sign {
   public readonly id: string;
@@ -9,7 +8,7 @@ export class Sign {
   public readonly data: string;
   public readonly created: Date;
   public readonly owner: Account;
-  constructor(p: Property) {
+  constructor(p: Sign.Property) {
     this.id = p.id ?? uuid();
     this.type = p.type;
     this.data = p.data;
@@ -18,6 +17,7 @@ export class Sign {
   }
 }
 export namespace Sign {
+  export type Property = Pick<Sign, "type" | "data" | "owner"> & Partial<Pick<Sign, "id" | "created">>;
   export type Type = "facebook" | "password";
   export namespace Kind {
     export function is(v: any): v is Type {

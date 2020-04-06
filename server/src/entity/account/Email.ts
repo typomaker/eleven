@@ -1,15 +1,6 @@
-import uuid from "./node_modules/uuid/v4";
+import uuid from "uuid/v4";
 import Account from "./User";
 
-export type Property = Pick<Email, (
-  | "address"
-  | "owner"
-)> & Partial<Pick<Email, (
-  | "created"
-  | "confirmed"
-  | "deleted"
-  | "id"
-)>>;
 export class Email {
   public readonly id: string;
   public readonly created: Date;
@@ -18,7 +9,7 @@ export class Email {
   public deleted: Date | null;
   public readonly owner: Account;
 
-  constructor(p: Property) {
+  constructor(p: Email.Property) {
     this.id = p.id ?? uuid();
     this.address = p.address;
     this.confirmed = p.confirmed ?? null;
@@ -35,5 +26,15 @@ export class Email {
     return this.confirmed !== null;
   }
 }
-
+export namespace Email {
+  export type Property = Pick<Email, (
+    | "address"
+    | "owner"
+  )> & Partial<Pick<Email, (
+    | "created"
+    | "confirmed"
+    | "deleted"
+    | "id"
+  )>>;
+}
 export default Email;

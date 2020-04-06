@@ -1,5 +1,5 @@
+import uuid from "uuid/v4";
 import Email from "./Email";
-import uuid from "./node_modules/uuid/v4";
 
 export class User {
   public id: string;
@@ -9,7 +9,7 @@ export class User {
   public emails: Email[];
   public deleted: Date | null;
 
-  constructor(p: Property = {}) {
+  constructor(p: User.Property = {}) {
     this.id = p.id ?? uuid();
     this.name = p.name ?? "";
     this.avatar = p.avatar ?? null;
@@ -22,12 +22,14 @@ export class User {
     return this.deleted !== null;
   }
 }
-export type Property = Partial<Pick<User, (
-  | "avatar"
-  | "id"
-  | "name"
-  | "created"
-  | "emails"
-  | "deleted"
-)>>;
+export namespace User {
+  export type Property = Partial<Pick<User, (
+    | "avatar"
+    | "id"
+    | "name"
+    | "created"
+    | "emails"
+    | "deleted"
+  )>>;
+}
 export default User;

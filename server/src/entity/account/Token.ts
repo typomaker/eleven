@@ -1,8 +1,7 @@
-import uuid from "./node_modules/uuid/v4";
+import uuid from "uuid/v4";
 import Sign from "./Sign";
 import User from "./User";
 
-type Property = Pick<Token, "owner"> & Partial<Pick<Token, "ip" | "id" | "created" | "updated" | "deleted" | "expired" | "sign">>;
 export class Token {
   public readonly id: string;
   public ip: string | null;
@@ -12,7 +11,7 @@ export class Token {
   public expired: Date | null;
   public readonly owner: User;
   public readonly sign: Sign | null;
-  constructor(p: Property) {
+  constructor(p: Token.Property) {
     const now = new Date();
     this.id = p.id ?? uuid();
     this.ip = p.ip ?? null;
@@ -33,6 +32,19 @@ export class Token {
   public get isExpired() {
     return this.expired !== null && this.expired.getTime() < new Date().getTime();
   }
+}
+
+export namespace Token {
+  export type Property = Pick<Token, "owner"> & Partial<Pick<Token,
+    | "ip"
+    | "id"
+    | "created"
+    | "updated"
+    | "deleted"
+    | "expired"
+    | "sign"
+  >>;
+
 }
 
 export default Token;
