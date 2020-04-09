@@ -51,31 +51,19 @@ create table account.token(
 
 create schema equipment;
 
-create table equipment.deck(
-  id uuid primary key not null default uuid_generate_v4(),
-  origin uuid default null references equipment.deck(id) on delete cascade on update cascade,
-  name varchar(256) default null references localization.word(id) on delete restrict on update cascade,
-  account uuid not null references account.user(id) on delete cascade on update cascade,
-  is_basic boolean not null default false,
-  created timestamp with time zone not null default current_timestamp,
-  deleted timestamp with time zone default null
-);
-create index on equipment.deck(created);
-create index on equipment.deck(deleted);
-
 create table equipment.card(
   id uuid primary key not null default uuid_generate_v4(),
   origin uuid default null references equipment.card(id) on delete cascade on update cascade,
   name varchar(256) default null references localization.word(id) on delete restrict on update cascade,
-  account uuid not null references account.user(id) on delete cascade on update cascade,
-  deck uuid not null references equipment.deck(id) on delete set null on update cascade,
+  "user" uuid default null references account.user(id) on delete cascade on update cascade,
+  is_basic boolean not null default false,
   created timestamp with time zone not null default current_timestamp,
   deleted timestamp with time zone default null
 );
 create index on equipment.card(created);
 create index on equipment.card(deleted);
 
-create table equipment.behavior(
+create table equipment.trait(
   id uuid primary key not null default uuid_generate_v4(),
   card uuid not null references equipment.card(id) on delete cascade on update cascade,
   source uuid not null references equipment.card(id) on delete restrict on update cascade,
@@ -126,7 +114,7 @@ create table activity.trophy(
 create table activity.lobby(
   id uuid primary key not null default uuid_generate_v4(),
   event uuid not null references activity.event(id) on delete cascade on update cascade,
-  deck uuid not null references equipment.deck(id) on delete cascade on update cascade,
+  card uuid not null references equipment.card(id) on delete cascade on update cascade,
   created timestamp with time zone not null default current_timestamp,
   deleted timestamp with time zone default null
 );
@@ -146,7 +134,7 @@ create index on activity.party(deleted);
 create table activity.member(
   id uuid primary key not null default uuid_generate_v4(),
   party uuid not null references activity.party(id) on delete cascade on update cascade,
-  deck uuid not null references equipment.deck(id) on delete restrict on update cascade
+  card uuid not null references equipment.card(id) on delete restrict on update cascade
 );
 
 create table activity.turn(
