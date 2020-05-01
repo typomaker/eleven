@@ -1,18 +1,18 @@
 import uuid from "uuid/v4";
-import Deck from "../equipment/Deck";
+import { Card } from "../equipment";
 import Event from "./Event";
 
 export class Lobby {
   public id: string;
   public event: Event;
-  public deck: Deck;
+  public card: Card;
   public created: Date;
   public deleted: Date | null;
 
   constructor(p: Lobby.Property) {
     this.id = p.id ?? uuid();
     this.event = p.event;
-    this.deck = p.deck;
+    this.card = p.card;
     this.created = p.created ?? new Date();
     this.deleted = p.deleted ?? null;
   }
@@ -27,7 +27,7 @@ export class Lobby {
 export namespace Lobby {
   export type Property =
     & Pick<Lobby, (
-      | "deck"
+      | "card"
       | "event"
     )>
     & Pick<Partial<Lobby>, (

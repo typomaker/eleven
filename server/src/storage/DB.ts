@@ -6,6 +6,7 @@ class DB {
   public async query<T = any>(sql: string): Promise<pg.QueryResult<T>> {
     return await this.connection?.query<T>(sql) ?? this.connect(() => this.query(sql));
   }
+
   private numberOfOpenned = 0;
   private connection?: pg.PoolClient;
   public async connect<T>(fn: (ctx: DB) => Promise<T>): Promise<T> {
@@ -57,6 +58,13 @@ class DB {
         }
       });
     }
+  }
+
+  public literal(v: string): string {
+    return pg.Client.prototype.escapeLiteral(v);
+  }
+  public identifier(v: string): string {
+    return pg.Client.prototype.escapeIdentifier(v);
   }
 }
 

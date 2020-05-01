@@ -9,6 +9,9 @@ class Registry {
   public get account() {
     return this.context.account;
   }
+  public get equipment() {
+    return this.context.equipment;
+  }
 }
 
 export default Registry;

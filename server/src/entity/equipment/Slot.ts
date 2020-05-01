@@ -20,6 +20,7 @@ export class Slot {
     return new Slot({
       ...this,
       id: null,
+      origin: this.origin ?? this,
     });
   }
 }

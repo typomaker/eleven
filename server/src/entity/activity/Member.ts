@@ -1,16 +1,16 @@
 import uuid from "uuid/v4";
-import Deck from "../equipment/Deck";
+import { Card } from "../equipment";
 import Party from "./Party";
 
 export class Member {
   public id: string;
   public party: Party;
-  public deck: Deck;
+  public card: Card;
 
   constructor(p: Member.Property) {
     this.id = p.id ?? uuid();
     this.party = p.party;
-    this.deck = p.deck;
+    this.card = p.card;
   }
 
   public clone() {
@@ -24,7 +24,7 @@ export namespace Member {
   export type Property =
     & Pick<Member, (
       | "party"
-      | "deck"
+      | "card"
     )>
     & Pick<Partial<Member>, (
       | "id"

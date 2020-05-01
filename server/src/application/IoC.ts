@@ -2,10 +2,11 @@ import pg from "pg";
 import Recaptcha2 from "recaptcha2";
 import Storage from "../storage";
 import Account from "./Account";
+import { Api } from "./Api";
 import Logger from "./Logger";
 import Password from "./Password";
 import WSocket from "./WSocket";
-class Container {
+class IoC {
   constructor(private readonly config: Container.Configuration) { }
 
   #logger?: Logger;
@@ -44,6 +45,7 @@ class Container {
     if (this.#wsocket) return this.#wsocket;
     return this.#wsocket = new WSocket(this);
   }
+  public readonly api = new Api(this);
 }
 namespace Container {
   export interface Configuration {
@@ -52,4 +54,4 @@ namespace Container {
     recaptcha2: Recaptcha2.Options;
   }
 }
-export default Container;
+export default IoC;

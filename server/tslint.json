@@ -7,7 +7,7 @@
   "rules": {
     "member-access": false,
     "member-ordering": false,
-    "arrow-parens": false,
+    "arrow-parens": true,
     "no-namespace": false,
     "no-shadowed-variable": false,
     "interface-name": false,

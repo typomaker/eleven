@@ -56,7 +56,7 @@ create table equipment.card(
   origin uuid default null references equipment.card(id) on delete cascade on update cascade,
   name varchar(256) default null references localization.word(id) on delete restrict on update cascade,
   "user" uuid default null references account.user(id) on delete cascade on update cascade,
-  is_basic boolean not null default false,
+  "basic" boolean not null default false,
   created timestamp with time zone not null default current_timestamp,
   deleted timestamp with time zone default null
 );
@@ -74,7 +74,7 @@ create table equipment.combination(
   card uuid not null references equipment.card(id) on delete cascade on update cascade,
   input uuid not null references equipment.card(id) on delete restrict on update cascade,
   output uuid not null references equipment.card(id) on delete restrict on update cascade,
-  is_basic boolean not null default false,
+  "basic" boolean not null default false,
   unique(card, input, output)
 );
 create table equipment.slot(

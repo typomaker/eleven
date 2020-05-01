@@ -13,7 +13,7 @@ export class Turn {
   public created: Date;
   public completed: Date | null;
 
-  constructor(p: Lobby.Property) {
+  constructor(p: Turn.Property) {
     this.id = p.id ?? uuid();
     this.party = p.party;
     this.member = p.member;
@@ -24,7 +24,7 @@ export class Turn {
     this.completed = p.completed ?? null;
   }
 }
-export namespace Lobby {
+export namespace Turn {
   export type Property =
     & Pick<Turn, (
       | "party"

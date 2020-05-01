@@ -3,13 +3,13 @@ import validator from "validator";
 import WebSocket from "ws";
 import * as entity from "../entity/account";
 import Account from "./Account";
-import Container from "./Container";
+import IoC from "./IoC";
 import Logger from "./Logger";
 class WSocket {
   private pool = new Map<entity.User["id"], Set<WebSocket>>();
   private server?: WebSocket.Server;
   private logger: Logger;
-  constructor(private readonly container: Container) {
+  constructor(private readonly container: IoC) {
     this.logger = this.container.logger.tag(WSocket.name);
   }
 
@@ -27,12 +27,12 @@ class WSocket {
     let token: entity.Token | undefined;
     const reply = (msg: WSocket.Message) => {
       const text = WSocket.Message.stringify(msg);
-      ws.send(text, e => this.logger.error(e));
+      ws.send(text, (e) => this.logger.error(e));
     };
     const send = (id: entity.User["id"], msg: WSocket.Message) => {
       const text = WSocket.Message.stringify(msg);
       for (const ws of this.pool.get(id) ?? []) {
-        ws.send(text, e => this.logger.error(e));
+        ws.send(text, (e) => this.logger.error(e));
       }
     };
     const register = (id: entity.User["id"], ws: WebSocket) => {
@@ -47,7 +47,7 @@ class WSocket {
     ws.on("close", async (code: number, reason: string) => {
       if (token) {
         token = await this.container.account.signout({ id: token.id });
-        unregister(token.owner.id, ws);
+        unregister(token.user.id, ws);
       }
     });
     ws.on("error", (err) => this.logger.error(err));
@@ -65,14 +65,14 @@ class WSocket {
             } else {
               token = await this.container.account.signin({ ...message.payload, ip: req.connection.remoteAddress });
             }
-            register(token.owner.id, ws);
+            register(token.user.id, ws);
             reply(WSocket.Message.Token.make(token));
-            reply(WSocket.Message.Token.Account.make(token.owner));
+            reply(WSocket.Message.Token.Account.make(token.user));
             break;
           }
           case "signout": {
             token = await this.container.account.signout({ id: message.payload.id });
-            unregister(token.owner.id, ws);
+            unregister(token.user.id, ws);
             ws.close();
           }
         }

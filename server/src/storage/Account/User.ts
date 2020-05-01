@@ -1,120 +1,358 @@
-import pg from "pg";
 import * as entity from "../../entity";
-import Context from "./../Context";
-import Stash from "./../Stash";
-type Filter = (
-  | ["&" | "|", Filter[]]
-  | ["=", "id", entity.account.User["id"]]
-  | ["in", "id", Array<entity.account.User["id"]>]
-);
-namespace Filter {
-  export function build(st: Filter): string {
-    switch (st[0]) {
-      case "|": case "&": return st[1].map(e => `(${Filter.build(e)})`).join({ "|": " OR ", "&": " AND " }[st[0]]);
-      case "=": switch (st[1]) {
-        case "id": return `id=${pg.Client.prototype.escapeLiteral(st[2])}`;
-      }
-      case "in": switch (st[1]) {
-        case "id": return `id IN(${st[2].map(pg.Client.prototype.escapeLiteral).join(",")})`;
-      }
-    }
+import Context from "../Context";
+
+interface Raw {
+  id: string;
+  name: string;
+  avatar: string | null;
+  created: Date;
+  deleted: Date | null;
+  emails: Raw.Email[];
+  signs: Raw.Sign[];
+}
+namespace Raw {
+  export interface Email {
+    id: string;
+    address: string;
+    confirmed: Date | null;
+    user: string;
+    created: Date;
+    deleted: Date | null;
+  }
+  export interface Sign {
+    id: string;
+    type: string;
+    data: string;
+    user: string;
+    created: Date;
+    deleted: Date | null;
   }
 }
-export class Account {
-  public readonly stash = new Stash<string, entity.account.User>();
-  constructor(private readonly context: Context) { }
+export class User {
+  constructor(private readonly ctx: Context) { }
 
-  private make(rows: any[]): entity.account.User[] {
-    return rows.map((row) => this.stash.get(row.id, () => new entity.account.User({
-      id: String(row.id),
-      avatar: row.avatar ? String(row.avatar) : null,
-      created: new Date(row.created),
-      name: String(row.name),
-    })));
-  }
-  public async get(ids: entity.account.User["id"]): Promise<entity.account.User | null>;
-  public async get(ids: Array<entity.account.User["id"]>): Promise<Map<entity.account.User["id"], entity.account.User>>;
-  public async get(id: Array<entity.account.User["id"]> | entity.account.User["id"]) {
-    if (!id) return new Map();
-    if (!Array.isArray(id)) return this.stash.get(id) ?? await this.read(["=", "id", id]).one();
-    const notStashed = id.filter(v => !this.stash.has(v));
-    if (notStashed.length) await this.read(["in", "id", notStashed]).all();
-    return new Map(id.filter(v => this.stash.has(v)).map(v => [v, this.stash.get(v)!]));
-  }
-  public read(filter?: Filter) {
-    return new class Reader {
-      #filter?: Filter = filter;
-      #limit: number | undefined;
-      #skip: number | undefined;
-      constructor(private readonly repository: Account) { }
-      public id(n: entity.account.User["id"] | Array<entity.account.User["id"]>) {
-        if (Array.isArray(n)) return this.filter(["in", "id", n]);
-        return this.filter(["=", "id", n]);
+  public readonly builder = new class Builder {
+    constructor(private readonly repo: User) { }
+
+    public readonly filter = new class {
+
+      constructor(private readonly repo: User) { }
+
+      private sign(n: User.Filter.Sign): string {
+        switch (n[0]) {
+          case "|": case "&": return "(" + n[1].map(this.sign.bind(this)).join({ "|": " OR ", "&": " AND " }[n[0]]) + ")";
+          case "=": switch (n[1]) {
+            case "id": return `id=${this.repo.ctx.db.literal(n[2])}`;
+            case "type": return `type=${this.repo.ctx.db.literal(n[2])}`;
+            case "data": return `data=${this.repo.ctx.db.literal(n[2])}`;
+            case "user": return `user=${this.repo.ctx.db.literal(n[2])}`;
+            case "deleted": return `deleted IS ${n[2] ? "NOT NULL" : "NULL"}`
+          }
+          case "in": switch (n[1]) {
+            case "id": return `id IN(${n[2].map(this.repo.ctx.db.literal).join(",")})`;
+          }
+        }
       }
-      public limit(n?: number): Reader {
-        const reader = this.clone();
-        reader.#limit = n;
-        return reader;
+
+      private email(n: User.Filter.Email): string {
+        switch (n[0]) {
+          case "|": case "&": return "(" + n[1].map(this.email.bind(this)).join({ "|": " OR ", "&": " AND " }[n[0]]) + ")";
+          case "=": switch (n[1]) {
+            case "id": return `id=${this.repo.ctx.db.literal(n[2])}`;
+            case "address": return `address=${this.repo.ctx.db.literal(n[2])}`;
+            case "confirmed": return `confirmed IS ${n[2] ? "NOT NULL" : "NULL"}`;
+            case "user": return `user=${this.repo.ctx.db.literal(n[2])}`;
+            case "deleted": return `deleted IS ${n[2] ? "NOT NULL" : "NULL"}`
+          }
+          case "in": switch (n[1]) {
+            case "id": return `id IN(${n[2].map(this.repo.ctx.db.literal).join(",")})`;
+          }
+        }
       }
-      public skip(n?: number): Reader {
-        const reader = this.clone();
-        reader.#skip = n;
-        return reader;
+
+      public build(n: User.Filter): string {
+        switch (n[0]) {
+          case "|": case "&": return "(" + n[1].map(this.build.bind(this)).join({ "|": " OR ", "&": " AND " }[n[0]]) + ")";
+          case "=": switch (n[1]) {
+            case "id": return `id=${this.repo.ctx.db.literal(n[2])}`;
+            case "emails": return `id IN(SELECT "user" FROM account.email WHERE ${this.email(n[2])})`;
+            case "signs": return `id IN(SELECT "user" FROM account.sign WHERE ${this.sign(n[2])})`;
+          }
+          case "in": switch (n[1]) {
+            case "id": return `id IN(${n[2].map(this.repo.ctx.db.literal).join(",")})`;
+          }
+        }
       }
-      public filter(n?: Filter): Reader {
-        const reader = this.clone();
-        reader.#filter = n && this.#filter ? ["&", [this.#filter, n]] : n;
-        return reader;
-      }
-      private clone() {
-        const reader = new Reader(this.repository);
-        reader.#filter = this.#filter;
-        reader.#skip = this.#skip;
-        reader.#limit = this.#limit;
-        return reader;
-      }
-      private static build(e: Reader) {
-        let query = "SELECT id, avatar, created, name FROM account.user";
-        if (e.#filter) query += " WHERE " + Filter.build(e.#filter);
-        if (e.#limit) query += " LIMIT " + Number(e.#limit);
-        if (e.#skip) query += " OFFSET " + Number(e.#skip);
+
+    }(this.repo);
+
+    public readonly reader = new class {
+
+      constructor(private readonly repo: User) { }
+
+      public build(n: User.Condition): string {
+        let query = `
+      SELECT
+        *
+      FROM
+        account."user",
+        LATERAL (
+          SELECT json_agg(email.*) as emails
+          FROM account.email
+          WHERE email."user" = "user".id
+        ) emails,
+        LATERAL (
+          SELECT json_agg(sign.*) as signs
+          FROM account.sign
+          WHERE sign."user" = "user".id
+        ) signs
+      `;
+        if (n.filter) query += " WHERE " + this.repo.builder.filter.build(n.filter);
+        if (n.limit) query += " LIMIT " + Number(n.limit);
+        if (n.skip) query += " OFFSET " + Number(n.skip);
         return query;
       }
-      public async one(): Promise<entity.account.User | null> {
-        const accounts = await this.limit(1).all();
-        return accounts[0] ?? null;
+
+    }(this.repo);
+
+    public readonly writer = new class {
+
+      constructor(private readonly repo: User) { }
+
+      private sign(vs: entity.account.Sign[]): string {
+        const values = vs.map((v) => (
+          `(
+          ${this.repo.ctx.db.literal(v.id)}::uuid,
+          ${this.repo.ctx.db.literal(v.type)}::account.sign_type,
+          ${this.repo.ctx.db.literal(v.data)},
+          ${this.repo.ctx.db.literal(v.created.toISOString())}::timestamp,
+          ${this.repo.ctx.db.literal(v.user.id)}::uuid,
+          ${v.deleted ? this.repo.ctx.db.literal(v.deleted.toISOString()) : "NULL"}::timestamp
+          )`
+        ))
+          .join(",");
+
+        const users = vs.map((v) => this.repo.ctx.db.literal(v.user.id)).join(",")
+        const ids = vs.map((v) => this.repo.ctx.db.literal(v.id))
+
+        return (
+          `
+          INSERT INTO account.sign(id, type, data, created, "user", deleted)
+          VALUES ${values}
+          UNION ALL
+          SELECT id, type, data, created, "user", NOW()
+            FROM account.sign
+            WHERE
+              account.sign."user" IN(${users})
+              AND
+              account.sign.id NOT IN(${ids})
+          ON CONFLICT(id)
+            DO UPDATE
+              SET
+                data=EXCLUDED.data,
+                deleted=EXCLUDED.deleted
+              WHERE (sign.data, sign.deleted)!=(EXCLUDED.data, EXCLUDED.deleted)
+          `
+        )
       }
-      public async all(): Promise<entity.account.User[]> {
-        const sql = Reader.build(this);
-        return await this.repository.context.db.connect(async () => {
-          const response = await this.repository.context.db.query(sql);
-          return this.repository.make(response.rows);
-        });
+
+      private email(vs: entity.account.Email[]): string {
+        const values = vs.map((email) => (
+          `(
+          ${this.repo.ctx.db.literal(email.id)}::uuid,
+          ${this.repo.ctx.db.literal(email.address)},
+          ${this.repo.ctx.db.literal(email.created.toISOString())}::timestamp,
+          ${email.confirmed ? this.repo.ctx.db.literal(email.confirmed.toISOString()) : "NULL"}::timestamp,
+          ${this.repo.ctx.db.literal(email.user.id)}::uuid,
+          ${email.deleted ? this.repo.ctx.db.literal(email.deleted.toISOString()) : "NULL"}::timestamp
+          )`
+        )).join(",");
+
+        const users = vs.map((v) => this.repo.ctx.db.literal(v.user.id)).join(",")
+        const ids = vs.map((v) => this.repo.ctx.db.literal(v.id))
+
+        return (
+          `INSERT INTO account.email(id, address, created, confirmed, "user", deleted)
+          VALUES ${values}
+          UNION ALL
+          SELECT id, address, created, confirmed, "user", NOW()
+            FROM account.email
+            WHERE
+              account.email."user" IN(${users})
+              AND
+              account.email.id NOT IN(${ids})
+          ON CONFLICT(id)
+            DO UPDATE
+              SET
+                confirmed=EXCLUDED.confirmed,
+                deleted=EXCLUDED.deleted
+              WHERE (email.confirmed)!=(EXCLUDED.confirmed)`
+        )
       }
-    }(this);
-  }
-  public async save(accounts: entity.account.User | entity.account.User[]): Promise<void> {
-    if (!Array.isArray(accounts)) {
-      accounts = [accounts];
+
+      private user(vs: entity.account.User[]): string {
+        const values = vs.map((v) => (
+          `(
+          ${this.repo.ctx.db.literal(v.id)}::uuid,
+          ${v.avatar ? this.repo.ctx.db.literal(v.avatar) : "NULL"},
+          ${this.repo.ctx.db.literal(v.created.toISOString())}::timestamp,
+          ${this.repo.ctx.db.literal(v.name)},
+          ${v.deleted ? this.repo.ctx.db.literal(v.deleted.toISOString()) : "NULL"}::timestamp
+          )`
+        )).join(",");
+
+        return (
+          `
+          INSERT INTO account.user(id, avatar, created, name, deleted)
+          VALUES ${values}
+          ON CONFLICT(id)
+            DO UPDATE
+              SET
+                name=EXCLUDED.name,
+                avatar=EXCLUDED.avatar,
+                deleted=EXCLUDED.deleted
+              WHERE ("user".name, "user".avatar, "user".deleted)!=(EXCLUDED.name,EXCLUDED.avatar,EXCLUDED.deleted)
+          `
+        )
+      }
+
+      public build(vs: entity.account.User[]): string {
+        return (
+          `
+          WITH
+            users AS (${this.user(vs)}),
+            emails AS (${this.email(vs.map((v) => v.emails).flat())}),
+            signs AS (${this.sign(vs.map((v) => v.signs).flat())})
+          SELECT 1
+          `
+        )
+      }
+    }(this.repo)
+  }(this);
+
+  public readonly finder = new class Reader {
+    constructor(private readonly repo: User) { }
+    public id(n: entity.account.User["id"] | entity.account.User["id"][]) {
+      if (Array.isArray(n)) return this.filter(["in", "id", n]);
+      return this.filter(["=", "id", n]);
     }
-    if (accounts.length === 0) return;
-    const sql = `
-      INSERT INTO account.user(id, avatar, created, name)
-      VALUES
-      (${
-      accounts.map(v => [
-        pg.Client.prototype.escapeLiteral(v.id),
-        v.avatar ? pg.Client.prototype.escapeLiteral(v.avatar) : "NULL",
-        pg.Client.prototype.escapeLiteral(v.created.toISOString()),
-        pg.Client.prototype.escapeLiteral(v.name),
-      ]).join("),(")
-      })
-      ON CONFLICT(id)
-        DO UPDATE
-          SET name=EXCLUDED.name, avatar=EXCLUDED.avatar
-          WHERE (user.name,user.avatar)!=(EXCLUDED.name,EXCLUDED.avatar)
-    `;
-    await this.context.db.query(sql);
+
+    #limit?: number;
+    public limit(n?: number): Reader {
+      const reader = this.clone();
+      reader.#limit = n;
+      return reader;
+    }
+    #skip?: number;
+    public skip(n?: number): Reader {
+      const reader = this.clone();
+      reader.#skip = n;
+      return reader;
+    }
+    #filter?: User.Filter;
+    public filter(n?: User.Filter): Reader {
+      const reader = this.clone();
+      reader.#filter = n && this.#filter ? ["&", [this.#filter, n]] : n;
+      return reader;
+    }
+    private clone() {
+      const reader = new Reader(this.repo);
+      reader.#filter = this.#filter;
+      reader.#skip = this.#skip;
+      reader.#limit = this.#limit;
+      return reader;
+    }
+    public async one(): Promise<entity.account.User | null> {
+      const items = await this.limit(1).all();
+      return items[0] ?? null;
+    }
+    public async assoc() {
+      const users = await this.all();
+      return new Map(users.map((user) => [user.id, user]))
+    }
+    public async all(): Promise<entity.account.User[]> {
+
+      const query = this.repo.builder.reader.build({ filter: this.#filter, limit: this.#limit, skip: this.#skip })
+      const result = await this.repo.ctx.db.query<Raw>(query);
+      const users: entity.account.User[] = []
+
+      for (const row of result.rows) {
+        const user = new entity.account.User({
+          id: row.id,
+          avatar: row.avatar,
+          created: row.created,
+          name: row.name,
+          deleted: row.deleted,
+        });
+
+        users.push(user);
+
+        for (const email of row.emails) {
+          user.emails.push(new entity.account.Email({
+            id: email.id,
+            user,
+            address: email.address,
+            confirmed: email.confirmed ? new Date(email.confirmed) : null,
+            created: new Date(email.created),
+            deleted: email.deleted ? new Date(email.deleted) : null,
+          }))
+        }
+
+        for (const sign of row.signs) {
+          user.signs.push(new entity.account.Sign({
+            id: sign.id,
+            user,
+            data: sign.data,
+            type: sign.type as entity.account.Sign.Type,
+            created: new Date(sign.created),
+            deleted: sign.deleted ? new Date(sign.deleted) : null,
+          }))
+        }
+
+      }
+
+      return users;
+    }
+  }(this);
+
+  public async save(...users: entity.account.User[]): Promise<void> {
+    if (users.length === 0) return;
+    const query = this.builder.writer.build(users);
+    await this.ctx.db.query(query);
   }
 }
-export default Account;
+export namespace User {
+  export type Condition = {
+    filter?: Filter
+    limit?: number
+    skip?: number
+  }
+  export type Filter = (
+    | readonly ["&" | "|", Filter[]]
+    | readonly ["=", "id", entity.account.User["id"]]
+    | readonly ["in", "id", entity.account.User["id"][]]
+    | readonly ["=", "signs", Filter.Sign]
+    | readonly ["=", "emails", Filter.Email]
+  );
+  export namespace Filter {
+    export type Sign = (
+      | readonly ["&" | "|", Filter.Sign[]]
+      | readonly ["=", "id", entity.account.Sign["id"]]
+      | readonly ["=", "type", entity.account.Sign["type"]]
+      | readonly ["=", "data", entity.account.Sign["data"]]
+      | readonly ["=", "deleted", boolean]
+      | readonly ["=", "user", entity.account.Sign["user"]["id"]]
+      | readonly ["in", "id", entity.account.Sign["id"][]]
+    )
+    export type Email = (
+      | readonly ["&" | "|", Filter.Email[]]
+      | readonly ["=", "id", entity.account.Email["id"]]
+      | readonly ["=", "address", entity.account.Email["address"]]
+      | readonly ["=", "confirmed", boolean]
+      | readonly ["=", "deleted", boolean]
+      | readonly ["=", "user", entity.account.Email["user"]["id"]]
+      | readonly ["in", "id", entity.account.Email["id"][]]
+    )
+  }
+}
+export default User;

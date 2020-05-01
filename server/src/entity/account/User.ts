@@ -1,5 +1,6 @@
 import uuid from "uuid/v4";
 import Email from "./Email";
+import Sign from "./Sign";
 
 export class User {
   public id: string;
@@ -7,6 +8,7 @@ export class User {
   public avatar: string | null;
   public created: Date;
   public emails: Email[];
+  public signs: Sign[];
   public deleted: Date | null;
 
   constructor(p: User.Property = {}) {
@@ -15,6 +17,7 @@ export class User {
     this.avatar = p.avatar ?? null;
     this.created = p.created ?? new Date();
     this.emails = p.emails ?? [];
+    this.signs = p.signs ?? [];
     this.deleted = p.deleted ?? null;
   }
 
@@ -27,8 +30,9 @@ export namespace User {
     | "avatar"
     | "id"
     | "name"
-    | "created"
     | "emails"
+    | "signs"
+    | "created"
     | "deleted"
   )>>;
 }

@@ -1,7 +1,7 @@
 import uuid from "uuid/v4";
 import Card from "./Card";
 
-export class Behavior {
+export class Trait {
   public id: string;
   public card: Card;
   public source: Card;
@@ -9,11 +9,11 @@ export class Behavior {
   constructor(p: Behavior.Property) {
     this.id = p.id ?? uuid();
     this.card = p.card;
-    this.source = p.source ?? "";
+    this.source = p.source;
   }
 
   public clone() {
-    return new Behavior({
+    return new Trait({
       ...this,
       id: null,
     });
@@ -21,12 +21,12 @@ export class Behavior {
 }
 export namespace Behavior {
   export type Property =
-    & Pick<Behavior, (
+    & Pick<Trait, (
       | "card"
       | "source"
     )>
-    & Pick<Partial<Behavior>, (
+    & Pick<Partial<Trait>, (
       | "id"
     )>;
 }
-export default Behavior;
+export default Trait;

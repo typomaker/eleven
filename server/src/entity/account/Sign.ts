@@ -1,23 +1,36 @@
 import uuid from "uuid/v4";
 import validator from "validator";
-import Account from "./User";
+import User from "./User";
 
 export class Sign {
   public readonly id: string;
   public readonly type: Sign.Type;
   public readonly data: string;
   public readonly created: Date;
-  public readonly owner: Account;
+  public readonly deleted: Date | null;
+  public readonly user: User;
   constructor(p: Sign.Property) {
     this.id = p.id ?? uuid();
     this.type = p.type;
     this.data = p.data;
     this.created = p.created ?? new Date();
-    this.owner = p.owner;
+    this.deleted = p.deleted ?? null;
+    this.user = p.user;
   }
 }
 export namespace Sign {
-  export type Property = Pick<Sign, "type" | "data" | "owner"> & Partial<Pick<Sign, "id" | "created">>;
+  export type Property = (
+    & Pick<Sign, (
+      | "type"
+      | "data"
+      | "user"
+    )>
+    & Pick<Partial<Sign>, (
+      | "id"
+      | "created"
+      | "deleted"
+    )>
+  );
   export type Type = "facebook" | "password";
   export namespace Kind {
     export function is(v: any): v is Type {

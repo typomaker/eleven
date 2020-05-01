@@ -1,5 +1,5 @@
 import uuid from "uuid/v4";
-import Card from "../equipment/Card";
+import { Card } from "../equipment";
 import Event from "./Event";
 
 export class Environment {

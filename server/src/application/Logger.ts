@@ -22,7 +22,7 @@ class Logger {
     return new Logger([...this.tags, ...name]);
   }
   protected stringify(...message: any[]) {
-    return this.tags.map(tag => `[${tag}]`).join("") + message.join(" ").trim();
+    return this.tags.map((tag) => `[${tag}]`).join("") + " " + message.join(" ").trim();
   }
 }
 

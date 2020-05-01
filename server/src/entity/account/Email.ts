@@ -1,5 +1,5 @@
 import uuid from "uuid/v4";
-import Account from "./User";
+import User from "./User";
 
 export class Email {
   public readonly id: string;
@@ -7,14 +7,14 @@ export class Email {
   public address: string;
   public confirmed: Date | null;
   public deleted: Date | null;
-  public readonly owner: Account;
+  public readonly user: User;
 
   constructor(p: Email.Property) {
     this.id = p.id ?? uuid();
     this.address = p.address;
     this.confirmed = p.confirmed ?? null;
     this.created = p.created ?? new Date();
-    this.owner = p.owner;
+    this.user = p.user;
     this.deleted = p.deleted ?? null;
   }
 
@@ -29,7 +29,7 @@ export class Email {
 export namespace Email {
   export type Property = Pick<Email, (
     | "address"
-    | "owner"
+    | "user"
   )> & Partial<Pick<Email, (
     | "created"
     | "confirmed"

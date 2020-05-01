@@ -1,2 +1,2 @@
-import Container from "./Container";
-export default Container;
+import IoC from "./IoC";
+export default IoC;

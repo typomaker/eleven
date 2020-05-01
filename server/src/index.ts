@@ -20,4 +20,4 @@ const app = new Application({
   },
 });
 
-app.wsocket.start();
+app.api.listen(80);

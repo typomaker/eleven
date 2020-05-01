@@ -1,7 +1,5 @@
-import Email from "./Email";
-import Factory from "./Factory";
-import Sign from "./Sign";
-import Token from "./Token";
-import Account from "./User";
-export { Account, Email, Sign, Token };
-export default Factory;
+// export * from "./Email";
+// export * from "./Sign";
+export * from "./Token";
+export * from "./User";
+

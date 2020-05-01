@@ -9,7 +9,7 @@ export class Token {
   public updated: Date;
   public deleted: Date | null;
   public expired: Date | null;
-  public readonly owner: User;
+  public readonly user: User;
   public readonly sign: Sign | null;
   constructor(p: Token.Property) {
     const now = new Date();
@@ -19,7 +19,7 @@ export class Token {
     this.updated = p.updated ?? now;
     this.deleted = p.deleted ?? null;
     this.expired = p.expired ?? null;
-    this.owner = p.owner;
+    this.user = p.user;
     this.sign = p.sign ?? null;
   }
 
@@ -35,15 +35,20 @@ export class Token {
 }
 
 export namespace Token {
-  export type Property = Pick<Token, "owner"> & Partial<Pick<Token,
-    | "ip"
-    | "id"
-    | "created"
-    | "updated"
-    | "deleted"
-    | "expired"
-    | "sign"
-  >>;
+  export type Property = (
+    & Pick<Token, (
+      | "user"
+    )>
+    & Partial<Pick<Token,
+      | "ip"
+      | "id"
+      | "created"
+      | "updated"
+      | "deleted"
+      | "expired"
+      | "sign"
+    >>
+  );
 
 }
 

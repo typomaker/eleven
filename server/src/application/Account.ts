@@ -1,16 +1,20 @@
 import axios from "axios";
 import * as account from "../entity/account";
-import Container from "./Container";
+import IoC from "./IoC";
 
+type Signin = (
+  & { ip?: string }
+  & (
+    | { type: "facebook", token: string }
+    | { type: "password", password: string, recaptcha2: string, email: string }
+  )
+)
 class Account {
-  constructor(private readonly container: Container) { }
-  public async signin(
-    value: { ip?: string } & (
-      | { type: "facebook", token: string }
-      | { type: "password", password: string, recaptcha2: string, email: string }
-    ),
-  ): Promise<account.Token> {
+  constructor(private readonly container: IoC) { }
+
+  public async signin(value: Signin): Promise<account.Token> {
     let token: account.Token;
+
     switch (value.type) {
       case "password": {
         try {
@@ -20,54 +24,46 @@ class Account {
           this.container.logger.debug("[Recaptcha2]", this.container.recaptcha2.translateErrors(e));
           throw new Account.Error("CaptchaInvalid");
         }
-        let email = await this.container.storage.account.email.read().address(value.email).one();
-        let sign: account.Sign | null;
-        if (!email) {
-          const owner = new account.User({ name: value.email.split("@")[0] });
-          await this.container.storage.account.user.save(owner);
-          email = new account.Email({ address: value.email, owner });
-          await this.container.storage.account.email.save(email);
-          sign = new account.Sign({ type: "password", data: await this.container.password.hash(value.password), owner });
-          await this.container.storage.account.sign.save(sign);
-        } else {
-          sign = await this.container.storage.account.sign.read().type("password").owner(email.owner).one();
-          if (!sign) throw new Account.Error("SignNotExist");
-          if (!await this.container.password.compare(value.password, sign.data)) throw new Account.Error("InvalidPassword");
+        let user = await this.container.storage.account.user.finder.filter(["=", "emails", ["=", "address", value.email]]).one();
+        if (!user) {
+          user = new account.User({ name: value.email.split("@")[0] });
+          user.emails.push(new account.Email({ address: value.email, user }))
+          user.signs.push(new account.Sign({ type: "password", data: await this.container.password.hash(value.password), user }))
         }
-        token = new account.Token({ owner: sign.owner, sign, ip: value.ip });
+        const sign = user.signs.find((sign) => sign.type === "password");
+        if (!sign) throw new Account.Error("SignNotExist");
+        if (!await this.container.password.compare(value.password, sign.data)) throw new Account.Error("InvalidPassword");
+
+        await this.container.storage.account.user.save(user);
+        token = new account.Token({ user: sign.user, sign, ip: value.ip });
         break;
       }
       case "facebook": {
+
         const fb = await axios.get(`https://graph.facebook.com/v4.0/me`, { params: { access_token: value.token, fields: "id,email,name" } });
-        let sign = await this.container.storage.account.sign.read().type("facebook").data(fb.data.id).one();
-        if (!sign) {
+        let user = await this.container.storage.account.user.finder.filter(["=", "signs", ["&", [["=", "type", "facebook"], ["=", "data", fb.data.id]]]]).one();
+        if (!user) {
+          user = new account.User({ name: fb.data.name || fb.data.email?.split("@")[0] });
           if (fb.data.email) {
-            let email = await this.container.storage.account.email.read().address(fb.data.email).one();
-            if (!email) {
-              const name = fb.data.name || fb.data.email?.split("@")[0];
-              const owner = new account.User({ name });
-              await this.container.storage.account.user.save(owner);
-              email = new account.Email({ address: fb.data.email, confirmed: new Date(), owner });
-              await this.container.storage.account.email.save(email);
-            }
-            if (!email.isConfirmed) throw new Account.Error("EmailUnconfirmed");
-            sign = new account.Sign({ type: "facebook", owner: email.owner, data: fb.data.id });
-          } else {
-            const owner = new account.User({ name: fb.data.name });
-            await this.container.storage.account.user.save(owner);
-            sign = new account.Sign({ type: "facebook", owner, data: fb.data.id });
-          }
-        } else {
-          if (fb.data.email) {
-            let email = await this.container.storage.account.email.read().address(fb.data.email).one();
-            if (!email) {
-              email = new account.Email({ address: fb.data.email, confirmed: new Date(), owner: sign.owner });
-              await this.container.storage.account.email.save(email);
-            }
+            user = (await this.container.storage.account.user.finder.filter(["=", "emails", ["=", "address", fb.data.email]]).one()) ?? user;
           }
         }
-        await this.container.storage.account.sign.save(sign);
-        token = new account.Token({ owner: sign.owner, sign, ip: value.ip });
+
+        let email = user.emails.find((email) => email.address === fb.data.email);
+        if (fb.data.email && !email) {
+          email = new account.Email({ address: fb.data.email, confirmed: new Date(), user })
+          user.emails.push(email);
+        }
+        if (email?.isConfirmed === false) throw new Account.Error("EmailUnconfirmed");
+
+        let sign = user.signs.find((sign) => sign.type === "facebook" && sign.data === fb.data.id);
+        if (!sign) {
+          sign = new account.Sign({ type: "facebook", user, data: fb.data.id });
+          user.signs.push(sign);
+        }
+
+        await this.container.storage.account.user.save(user);
+        token = new account.Token({ user, sign, ip: value.ip });
         break;
       }
     }
@@ -76,20 +72,20 @@ class Account {
     return token;
   }
   public async signout(value: { id: string }): Promise<account.Token> {
-    const token = await this.container.storage.account.token.get(value.id);
+    const token = await this.container.storage.account.token.finder.filter(["=", "id", value.id]).one();
     if (!token) throw new Account.Error("NotExist");
     await this.container.storage.account.token.delete(token);
     return token;
   }
   public async authorize(value: { id: string }): Promise<account.Token> {
-    let token = await this.container.storage.account.token.get(value.id);
+    let token = await this.container.storage.account.token.finder.filter(["=", "id", value.id]).one();
     if (!token) throw new Account.Error("NotExist");
     if (token.isExpired) {
       if (!token.isDeleted) await this.container.storage.account.token.delete(token);
       throw new Account.Error("Expired");
     }
     if (token.isDeleted) {
-      token = new account.Token({ owner: token.owner, ip: token.ip });
+      token = new account.Token({ user: token.user, ip: token.ip });
       await this.container.storage.account.token.save(token);
     }
     return token;
