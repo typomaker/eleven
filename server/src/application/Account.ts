@@ -22,7 +22,7 @@ class Account {
           await this.container.recaptcha2.validate(value.recaptcha2);
         } catch (e) {
           this.container.logger.debug("[Recaptcha2]", this.container.recaptcha2.translateErrors(e));
-          throw new Account.Error("CaptchaInvalid");
+          throw new Account.Exception("CaptchaInvalid");
         }
         let user = await this.container.storage.account.user.finder.filter(["=", "emails", ["=", "address", value.email]]).one();
         if (!user) {
@@ -31,8 +31,8 @@ class Account {
           user.signs.push(new account.Sign({ type: "password", data: await this.container.password.hash(value.password), user }))
         }
         const sign = user.signs.find((sign) => sign.type === "password");
-        if (!sign) throw new Account.Error("SignNotExist");
-        if (!await this.container.password.compare(value.password, sign.data)) throw new Account.Error("InvalidPassword");
+        if (!sign) throw new Account.Exception("SignNotExist");
+        if (!await this.container.password.compare(value.password, sign.data)) throw new Account.Exception("InvalidPassword");
 
         await this.container.storage.account.user.save(user);
         token = new account.Token({ user: sign.user, sign, ip: value.ip });
@@ -54,7 +54,7 @@ class Account {
           email = new account.Email({ address: fb.data.email, confirmed: new Date(), user })
           user.emails.push(email);
         }
-        if (email?.isConfirmed === false) throw new Account.Error("EmailUnconfirmed");
+        if (email?.isConfirmed === false) throw new Account.Exception("EmailUnconfirmed");
 
         let sign = user.signs.find((sign) => sign.type === "facebook" && sign.data === fb.data.id);
         if (!sign) {
@@ -66,6 +66,7 @@ class Account {
         token = new account.Token({ user, sign, ip: value.ip });
         break;
       }
+      default: throw new Account.Exception("Invalid");
     }
 
     await this.container.storage.account.token.save(token);
@@ -73,16 +74,16 @@ class Account {
   }
   public async signout(value: { id: string }): Promise<account.Token> {
     const token = await this.container.storage.account.token.finder.filter(["=", "id", value.id]).one();
-    if (!token) throw new Account.Error("NotExist");
+    if (!token) throw new Account.Exception("NotExist");
     await this.container.storage.account.token.delete(token);
     return token;
   }
   public async authorize(value: { id: string }): Promise<account.Token> {
     let token = await this.container.storage.account.token.finder.filter(["=", "id", value.id]).one();
-    if (!token) throw new Account.Error("NotExist");
+    if (!token) throw new Account.Exception("NotExist");
     if (token.isExpired) {
       if (!token.isDeleted) await this.container.storage.account.token.delete(token);
-      throw new Account.Error("Expired");
+      throw new Account.Exception("Expired");
     }
     if (token.isDeleted) {
       token = new account.Token({ user: token.user, ip: token.ip });
@@ -92,9 +93,8 @@ class Account {
   }
 
 }
-const BaseError = Error;
 namespace Account {
-  export class Error extends BaseError { }
+  export class Exception extends Error { }
 }
 
 export default Account;

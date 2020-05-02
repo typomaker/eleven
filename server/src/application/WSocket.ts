@@ -109,7 +109,7 @@ namespace WSocket {
     export namespace Error {
       export function make(e: any): Error {
         const v: Error = { type: "error", payload: { text: "Internal" } };
-        if (e instanceof Account.Error) {
+        if (e instanceof Account.Exception) {
           v.payload.text = e.message;
         }
         return v;
