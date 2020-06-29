@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+set -Eeo pipefail
+
+# check to see if this file is being run or sourced from another script
+_is_sourced() {
+	# https://unix.stackexchange.com/a/215279
+	[ "${#FUNCNAME[@]}" -ge 2 ] \
+		&& [ "${FUNCNAME[0]}" = '_is_sourced' ] \
+		&& [ "${FUNCNAME[1]}" = 'source' ]
+}
+
+source docker-entrypoint.sh 
+
+_check(){
+  PGPASSWORD=$POSTGRES_PASSWORD psql -U $POSTGRES_USER -c &> /dev/null '\q'
+}
+_wait(){
+  echo "Waiting startup..."
+  until _check; do
+    sleep 1
+  done
+  echo "Started"
+}
+_dump(){
+  if ! _check; then
+    _main postgres &> /dev/null &
+    _wait
+  fi
+  echo "Waiting for a dump to complete..."
+  pg_dump -a -U ${POSTGRES_USER} eleven > /docker-entrypoint-initdb.d/1_data.sql
+  echo "Done"
+}
+if ! _is_sourced; then
+	_dump
+fi
