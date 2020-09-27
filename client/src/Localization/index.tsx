@@ -1,32 +1,34 @@
 import React, { useState, useEffect } from "react";
 import Dictionary from "./Dictionary";
+import en from "./translate/en";
+
 interface Localization {
     ready: boolean,
-    selected: keyof Localization["languages"],
+    current: keyof Localization["languages"],
     languages: Record<"ru" | "en", { title: string }>
     set: (value: keyof Localization["languages"]) => void,
-    t?: Dictionary
+    t: Dictionary
 }
 
 namespace Localization {
-    const initial: Localization = {
-        selected: "ru",
-        ready: false,
-        languages: {
-            "ru": { title: "Русский" },
-            "en": { title: "English" },
-        },
-        set: () => { },
+    const language = navigator?.language?.split("-")[0]
+    const languages = {
+        "ru": { title: "Русский" },
+        "en": { title: "English" },
     }
     function isSupported(v: string): v is keyof Localization['languages'] {
-        return initial.languages.hasOwnProperty(v);
+        return languages.hasOwnProperty(v);
     }
+    const initial: Localization = {
+        current: isSupported(language) ? language : "en",
+        ready: false,
+        languages,
+        set: () => { },
+        t: en
+    }
+
     async function load(v: keyof Localization['languages']): Promise<Dictionary> {
         return import("./translate/" + v).then(v => v.default);
-    }
-    const language = navigator?.language?.split("-")[0]
-    if (isSupported(language)) {
-        initial.selected = language;
     }
     export const Context = React.createContext<Localization>(initial);
     Context.displayName = "Language";
@@ -36,13 +38,13 @@ namespace Localization {
         const [value, setValue] = useState<Localization>({
             ...initial,
             set: (selected: keyof Localization["languages"]) => {
-                setValue({ ...value, selected })
+                setValue({ ...value, current: selected })
             }
         });
         useEffect(() => {
             setValue({ ...value, ready: false })
-            load(value.selected).then(t => setValue({ ...value, t, ready: true }))
-        }, [value.selected])
+            load(value.current).then(t => setValue({ ...value, t, ready: true }))
+        }, [value.current])
 
         return (
             <Context.Provider value={value}>

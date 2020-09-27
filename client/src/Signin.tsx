@@ -17,9 +17,9 @@ import IconButton from '@material-ui/core/IconButton';
 import Visibility from '@material-ui/icons/Visibility';
 import VisibilityOff from '@material-ui/icons/VisibilityOff';
 import Slide from '@material-ui/core/Slide';
-import WSocket from './WSocket';
 import validator from 'validator';
 import Localization from "./Localization";
+import Session from './Session';
 
 const useStyles = makeStyles((theme: Theme) => createStyles({
     paper: {
@@ -57,8 +57,9 @@ const useStyles = makeStyles((theme: Theme) => createStyles({
 const recaptchaRef = React.createRef<ReCaptcha>();
 
 export default function Signin() {
-    const wsocket = useContext(WSocket.Context);
     const localization = useContext(Localization.Context);
+    const session = useContext(Session.Context);
+
     const classes = useStyles({});
     const [email, setEmail] = useState({ value: '', error: '' });
     const [password, setPassword] = useState({ value: '', error: '', visible: false });
@@ -70,22 +71,22 @@ export default function Signin() {
     function onConfirm() {
         return () => {
             if (validate()) {
-                wsocket.send({ type: "signin", payload: { type: "password", password: password.value, email: email.value, recaptcha2: recaptcha2.value } })
+                session.signin({ type: "password", password: password.value, email: email.value, recaptcha2: recaptcha2.value })
             }
         }
     }
     function onLogin() {
         return (token: string) => {
-            wsocket.send({ type: "signin", payload: { type: "facebook", token } })
+            session.signin({ type: "facebook", token })
         }
     }
     function emailChange(event: React.ChangeEvent<HTMLInputElement>) {
-        event.persist();
-        setEmail(prev => ({ ...prev, value: event.target.value, error: '' }));
+        const value = event.target.value
+        setEmail(prev => ({ ...prev, value, error: '' }));
     }
     function passwordChange(event: React.ChangeEvent<HTMLInputElement>) {
-        event.persist();
-        setPassword(prev => ({ ...prev, value: event.target.value, error: '' }));
+        const value = event.target.value
+        setPassword(prev => ({ ...prev, value, error: '' }));
     }
     function recaptcha2Change(event: React.ChangeEvent<{}>, checked: boolean): void {
         const target = event.target as HTMLInputElement
@@ -187,7 +188,7 @@ export default function Signin() {
                                         : undefined
                                 }
                             />}
-                            label={localization.t?.imNotARobot}
+                            label={localization.t.imNotARobot}
                             checked={recaptcha2.value !== '' && recaptcha2.checked}
                         />
                         <FormHelperText>{recaptcha2.error}</FormHelperText>
@@ -203,7 +204,7 @@ export default function Signin() {
                                 onClick={onConfirm()}
                                 disabled={email.value === "" || password.value === "" || recaptcha2.value === ""}
                             >
-                                {localization.t?.signin}
+                                {localization.t.signin}
                             </Button>
                             <Facebook appId={process.env.FACEBOOK_ID!} onLogin={onLogin()} onFailure={onFailure} />
                         </div>

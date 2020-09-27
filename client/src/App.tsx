@@ -7,6 +7,7 @@ import Session from "./Session";
 import Localization from "./Localization";
 import Splashscreen from "./Splashscreen";
 import Router from "./Router";
+import Http from "./Http";
 
 export default class App extends React.Component {
     public render(): React.ReactNode {
@@ -15,17 +16,17 @@ export default class App extends React.Component {
                 <Theme>
                     <CssBaseline />
                     <Localization.Provider>
-                        <Configuration.Provider>
-                            <WSocket.Provider>
-                                <Session.Provider>
-                                    <Session.Account.Provider>
+                        <Http.Provider value={{ host: "https://server." + process.env.DOMAIN! }}>
+                            <Configuration.Provider>
+                                <WSocket.Provider>
+                                    <Session.Provider>
                                         <Splashscreen>
                                             <Router />
                                         </Splashscreen>
-                                    </Session.Account.Provider>
-                                </Session.Provider>
-                            </WSocket.Provider>
-                        </Configuration.Provider>
+                                    </Session.Provider>
+                                </WSocket.Provider>
+                            </Configuration.Provider>
+                        </Http.Provider>
                     </Localization.Provider>
                 </Theme>
             </>

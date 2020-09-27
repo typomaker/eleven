@@ -1,9 +1,6 @@
 {
-  "verbose": true,
-  "delay": 1,
-  "watch": [
-    "dist"
-  ],
+  "delay": 10,
+  "watch": "./dist",
   "execMap": {
     "js": "node --harmony --inspect=0.0.0.0"
   }

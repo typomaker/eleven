@@ -7,7 +7,7 @@ class WSocket {
   private readonly subscribers = new Set<Subscriber>();
   constructor(public readonly host: string) { }
   private connect(): WebSocket {
-    const ws = new WebSocket(`wss://server.${this.host}`)
+    const ws = new WebSocket(this.host)
     ws.onopen = (e) => {
       console.log('[WSocket] connected: ', e)
     }
@@ -64,7 +64,7 @@ namespace WSocket {
   export const Provider: React.FunctionComponent = ({ children }) => {
     const configuration = useContext(Configuration.Context);
     return (
-      <Context.Provider value={new WSocket(configuration.domain)}>
+      <Context.Provider value={new WSocket(configuration.ws)}>
         {children}
       </Context.Provider>
     )

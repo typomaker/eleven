@@ -1,20 +1,11 @@
-export type Component<T, D extends keyof T = any> = Partial<T> & Required<Pick<T, D>>
 
+export type Component<T extends object, R extends keyof T = any> = Partial<T> & Required<Pick<T, R>>
 export namespace Component {
-
-  export type Property<T> = keyof T;
-
-  export function cleanup<T>(entity: Component<T>): Component<T> {
-    const keys = Object.keys(entity) as (keyof object)[];
-    for (const key of keys) {
-      if (entity[key] === undefined) delete entity[key]
+  export function cleanup<T extends object>(component: Component<T>): Component<T> {
+    for (const key of Object.getOwnPropertyNames(component) as (keyof Component<T>)[]) {
+      if (component[key] === undefined) delete component[key];
     }
-    return entity;
-  }
-
-  export function property<T>(component: Component<T>): Component.Property<T>[] {
-    return Object.getOwnPropertyNames(component) as Component.Property<T>[]
+    return component;
   }
 }
-
 export default Component;

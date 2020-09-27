@@ -3,7 +3,7 @@ import Button from '@material-ui/core/Button';
 import makeStyles from '@material-ui/core/styles/makeStyles';
 import type { Theme } from '@material-ui/core/styles';
 import createStyles from '@material-ui/core/styles/createStyles';
-import { Vk as VkIcon } from 'mdi-material-ui'
+import VkIcon from 'mdi-material-ui/Vk'
 
 const useStyles = makeStyles((theme: Theme) => createStyles({
     button: {

@@ -15,6 +15,7 @@
     "object-literal-sort-keys": false,
     "no-console": false,
     "max-line-length": false,
+    "ban-types": false,
     "curly": [
       true,
       "ignore-same-line"

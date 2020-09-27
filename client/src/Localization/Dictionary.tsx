@@ -3,4 +3,7 @@ export default interface Translate {
   password: string
   email: string
   imNotARobot: string
+  iconTooSmall: string
+  invalidCharacterName: string
+  name: string
 }

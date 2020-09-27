@@ -3,23 +3,30 @@ version: '3.7'
 services:
   server:
     volumes:
-      - ./server:/server
+      - ./server:/server:delegated
     env_file:
       - .env
     ports:
       - 9229:9229
   client:
     volumes:
-      - ./client:/client
+      - ./client:/client:delegated
     env_file:
       - .env
   postgres:
     volumes:
       - ./postgres/data:/var/lib/postgresql/data:rw
-      - ./postgres/initdb.d/:/docker-entrypoint-initdb.d/:ro
+      - ./postgres/initdb.d/:/docker-entrypoint-initdb.d/
     ports:
       - 5432:5432
     env_file:
+      - .env
+  mongodb:
+    volumes:
+      - ./mongodb/data:/data/db
+    ports:
+      - 27017:27017
+    env_file: 
       - .env
   nginx:
     env_file:

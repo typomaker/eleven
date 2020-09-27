@@ -7,18 +7,18 @@ class DB {
     return await this.connection?.query<T>(sql) ?? this.connect(() => this.query(sql));
   }
 
-  private numberOfOpenned = 0;
+  private openned = 0;
   private connection?: pg.PoolClient;
   public async connect<T>(fn: (ctx: DB) => Promise<T>): Promise<T> {
-    if (this.numberOfOpenned === 0 && !this.connection) {
+    if (this.openned === 0 && !this.connection) {
       this.connection = await this.pool.connect();
     }
 
-    this.numberOfOpenned++;
+    this.openned++;
     const result = await fn(this);
-    this.numberOfOpenned--;
+    this.openned--;
 
-    if (this.numberOfOpenned === 0 && this.connection) {
+    if (this.openned === 0 && this.connection) {
       this.connection.release();
       this.connection = undefined;
     }

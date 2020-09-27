@@ -9,6 +9,10 @@ services:
     build:
       context: postgres
     restart: unless-stopped
+  mongodb:
+    build:
+      context: mongodb
+    restart: unless-stopped
   client:
     build:
       context: client

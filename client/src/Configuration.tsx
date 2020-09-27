@@ -1,13 +1,15 @@
 import React, { useState } from "react";
 
 interface Configuration {
-    domain: string
+    readonly http: string
+    readonly ws: string
     set: (value: Omit<Configuration, "set">) => void
 }
 
 namespace Configuration {
     const initial = {
-        domain: process.env.DOMAIN!,
+        http: "https://server." + process.env.DOMAIN!,
+        ws: "wss://server." + process.env.DOMAIN!,
         set: () => { }
     }
     export const Context = React.createContext<Configuration>(initial);

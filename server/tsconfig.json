@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "preserveWatchOutput": true,
     "module": "commonjs",
     "outDir": "./dist",
     "esModuleInterop": true,
@@ -11,12 +12,14 @@
     "moduleResolution": "node",
     "sourceMap": true,
     "strictNullChecks": true,
-    "strict": true
+    "strict": true,
+    "incremental": true
   },
   "include": [
     "./src/**/*"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "dist"
   ]
 }

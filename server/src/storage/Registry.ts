@@ -2,15 +2,12 @@ import pg from "pg";
 import Context from "./Context";
 
 class Registry {
-  constructor(public readonly pool: pg.Pool) { }
+  constructor(public readonly pg: pg.Pool) { }
   public get context() {
-    return new Context(this.pool);
+    return new Context(this.pg);
   }
   public get account() {
     return this.context.account;
-  }
-  public get equipment() {
-    return this.context.equipment;
   }
 }
 

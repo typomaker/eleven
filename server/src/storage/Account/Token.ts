@@ -1,4 +1,4 @@
-import * as entity from "../../entity";
+import * as account from "../../account";
 import Context from "../Context";
 
 interface Raw {
@@ -15,7 +15,7 @@ export class Token {
 
   public readonly finder = new class Finder {
     constructor(private readonly repo: Token) { }
-    public id(n: entity.account.Token["id"] | entity.account.Token["id"][]): Finder {
+    public id(n: account.Token["id"] | account.Token["id"][]): Finder {
       if (Array.isArray(n)) return this.filter(["in", "id", n]);
       return this.filter(["=", "id", n]);
     }
@@ -57,18 +57,18 @@ export class Token {
       return query;
     }
 
-    public async one(): Promise<entity.account.Token | null> {
+    public async one(): Promise<account.Token | null> {
       const items = await this.limit(1).all();
       return items[0] ?? null;
     }
 
-    public async all(): Promise<entity.account.Token[]> {
+    public async all(): Promise<account.Token[]> {
       const sql = this.build();
       const response = await this.repo.ctx.db.query<Raw>(sql);
       const users = await this.repo.ctx.account.user.finder.filter(["in", "id", response.rows.map((row) => row.user)]).assoc()
-      const tokens: entity.account.Token[] = [];
+      const tokens: account.Token[] = [];
       for (const raw of response.rows) {
-        tokens.push(new entity.account.Token({
+        tokens.push(new account.Token({
           id: raw.id,
           user: users.get(raw.user)!,
           ip: raw.ip,
@@ -97,7 +97,7 @@ export class Token {
     }
   }(this);
 
-  public async delete(tokens: entity.account.Token | entity.account.Token[]): Promise<void> {
+  public async delete(tokens: account.Token | account.Token[]): Promise<void> {
     if (!Array.isArray(tokens)) {
       tokens = [tokens];
     }
@@ -107,7 +107,7 @@ export class Token {
     return this.save(tokens);
   }
 
-  public async save(tokens: entity.account.Token | entity.account.Token[]): Promise<void> {
+  public async save(tokens: account.Token | account.Token[]): Promise<void> {
     if (!Array.isArray(tokens)) {
       tokens = [tokens];
     }
@@ -137,10 +137,10 @@ export class Token {
 export namespace Token {
   export type Filter = (
     | readonly ["&" | "|", Filter[]]
-    | readonly ["=", "id", entity.account.Token["id"]]
-    | readonly ["=", "isDeleted", entity.account.Token["isDeleted"]]
-    | readonly ["=", "isExpired", entity.account.Token["isDeleted"]]
-    | readonly ["in", "id", entity.account.Token["id"][]]
+    | readonly ["=", "id", account.Token["id"]]
+    | readonly ["=", "isDeleted", account.Token["isDeleted"]]
+    | readonly ["=", "isExpired", account.Token["isDeleted"]]
+    | readonly ["in", "id", account.Token["id"][]]
   );
 }
 export default Token;

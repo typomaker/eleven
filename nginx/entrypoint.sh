@@ -32,8 +32,8 @@ fi
 
 for f in $(find /conf.d/ -regex '.*\.conf'); do
     envsubst '${DOMAIN}' < ${f} > "/etc/nginx/conf.d/$(basename $f)";
-    cat /etc/nginx/conf.d/$(basename $f);
-    echo
+    # cat /etc/nginx/conf.d/$(basename $f);
+    # echo
     done
 
 exec "$@"

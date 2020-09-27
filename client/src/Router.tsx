@@ -1,19 +1,21 @@
 import React, { useContext } from "react"
 import { BrowserRouter, Switch, Route, Redirect } from "react-router-dom";
 import Signin from './Signin';
-import Home from "./Home";
+import Start from "./Start";
 import Session from "./Session";
 export const Router: React.FunctionComponent = () => {
-  const account = useContext(Session.Account.Context);
-
+  const session = useContext(Session.Context);
+  if (!session.value.user) {
+    return <Signin />
+  }
   return (
     <BrowserRouter>
       <Switch>
         <Route path="/signin">
-          {account ? <Redirect to="/" /> : <Signin />}
+          <Signin />
         </Route>
         <Route path="/">
-          {account ? <Home /> : <Redirect to="/signin" />}
+          <Start />
         </Route>
       </Switch>
     </BrowserRouter>

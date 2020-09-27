@@ -1,4 +1,4 @@
-import * as entity from "../../entity";
+import * as account from "../../account";
 import Context from "../Context";
 
 interface Raw {
@@ -119,7 +119,7 @@ export class User {
 
       constructor(private readonly repo: User) { }
 
-      private sign(vs: entity.account.Sign[]): string {
+      private sign(vs: account.Sign[]): string {
         const values = vs.map((v) => (
           `(
           ${this.repo.ctx.db.literal(v.id)}::uuid,
@@ -156,7 +156,7 @@ export class User {
         )
       }
 
-      private email(vs: entity.account.Email[]): string {
+      private email(vs: account.Email[]): string {
         const values = vs.map((email) => (
           `(
           ${this.repo.ctx.db.literal(email.id)}::uuid,
@@ -190,7 +190,7 @@ export class User {
         )
       }
 
-      private user(vs: entity.account.User[]): string {
+      private user(vs: account.User[]): string {
         const values = vs.map((v) => (
           `(
           ${this.repo.ctx.db.literal(v.id)}::uuid,
@@ -216,7 +216,7 @@ export class User {
         )
       }
 
-      public build(vs: entity.account.User[]): string {
+      public build(vs: account.User[]): string {
         return (
           `
           WITH
@@ -232,7 +232,7 @@ export class User {
 
   public readonly finder = new class Reader {
     constructor(private readonly repo: User) { }
-    public id(n: entity.account.User["id"] | entity.account.User["id"][]) {
+    public id(n: account.User["id"] | account.User["id"][]) {
       if (Array.isArray(n)) return this.filter(["in", "id", n]);
       return this.filter(["=", "id", n]);
     }
@@ -262,7 +262,7 @@ export class User {
       reader.#limit = this.#limit;
       return reader;
     }
-    public async one(): Promise<entity.account.User | null> {
+    public async one(): Promise<account.User | null> {
       const items = await this.limit(1).all();
       return items[0] ?? null;
     }
@@ -270,14 +270,14 @@ export class User {
       const users = await this.all();
       return new Map(users.map((user) => [user.id, user]))
     }
-    public async all(): Promise<entity.account.User[]> {
+    public async all(): Promise<account.User[]> {
 
       const query = this.repo.builder.reader.build({ filter: this.#filter, limit: this.#limit, skip: this.#skip })
       const result = await this.repo.ctx.db.query<Raw>(query);
-      const users: entity.account.User[] = []
+      const users: account.User[] = []
 
       for (const row of result.rows) {
-        const user = new entity.account.User({
+        const user = new account.User({
           id: row.id,
           avatar: row.avatar,
           created: row.created,
@@ -288,7 +288,7 @@ export class User {
         users.push(user);
 
         for (const email of row.emails) {
-          user.emails.push(new entity.account.Email({
+          user.emails.push(new account.Email({
             id: email.id,
             user,
             address: email.address,
@@ -299,11 +299,11 @@ export class User {
         }
 
         for (const sign of row.signs) {
-          user.signs.push(new entity.account.Sign({
+          user.signs.push(new account.Sign({
             id: sign.id,
             user,
             data: sign.data,
-            type: sign.type as entity.account.Sign.Type,
+            type: sign.type as account.Sign.Type,
             created: new Date(sign.created),
             deleted: sign.deleted ? new Date(sign.deleted) : null,
           }))
@@ -315,7 +315,7 @@ export class User {
     }
   }(this);
 
-  public async save(...users: entity.account.User[]): Promise<void> {
+  public async save(...users: account.User[]): Promise<void> {
     if (users.length === 0) return;
     const query = this.builder.writer.build(users);
     await this.ctx.db.query(query);
@@ -329,29 +329,29 @@ export namespace User {
   }
   export type Filter = (
     | readonly ["&" | "|", Filter[]]
-    | readonly ["=", "id", entity.account.User["id"]]
-    | readonly ["in", "id", entity.account.User["id"][]]
+    | readonly ["=", "id", account.User["id"]]
+    | readonly ["in", "id", account.User["id"][]]
     | readonly ["=", "signs", Filter.Sign]
     | readonly ["=", "emails", Filter.Email]
   );
   export namespace Filter {
     export type Sign = (
       | readonly ["&" | "|", Filter.Sign[]]
-      | readonly ["=", "id", entity.account.Sign["id"]]
-      | readonly ["=", "type", entity.account.Sign["type"]]
-      | readonly ["=", "data", entity.account.Sign["data"]]
+      | readonly ["=", "id", account.Sign["id"]]
+      | readonly ["=", "type", account.Sign["type"]]
+      | readonly ["=", "data", account.Sign["data"]]
       | readonly ["=", "deleted", boolean]
-      | readonly ["=", "user", entity.account.Sign["user"]["id"]]
-      | readonly ["in", "id", entity.account.Sign["id"][]]
+      | readonly ["=", "user", account.Sign["user"]["id"]]
+      | readonly ["in", "id", account.Sign["id"][]]
     )
     export type Email = (
       | readonly ["&" | "|", Filter.Email[]]
-      | readonly ["=", "id", entity.account.Email["id"]]
-      | readonly ["=", "address", entity.account.Email["address"]]
+      | readonly ["=", "id", account.Email["id"]]
+      | readonly ["=", "address", account.Email["address"]]
       | readonly ["=", "confirmed", boolean]
       | readonly ["=", "deleted", boolean]
-      | readonly ["=", "user", entity.account.Email["user"]["id"]]
-      | readonly ["in", "id", entity.account.Email["id"][]]
+      | readonly ["=", "user", account.Email["user"]["id"]]
+      | readonly ["in", "id", account.Email["id"][]]
     )
   }
 }

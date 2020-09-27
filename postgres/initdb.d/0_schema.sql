@@ -1,18 +1,5 @@
 create extension if not exists "uuid-ossp";
 
-create schema localization;
-
-create table localization.language(id char(2) primary key not null);
-create table localization.word(
-  id varchar(256) primary key not null check(id ~ '^[a-z][a-z0-9.]+$')
-);
-create table localization.translate(
-  language char(2) not null references localization.language(id) on delete restrict on update cascade,
-  word varchar(256) not null references localization.word(id) on delete restrict on update cascade,
-  value text,
-  primary key(language, word)
-);
-
 create schema account;
 
 create table account.user(
@@ -53,23 +40,4 @@ create table account.token(
   created timestamp with time zone not null default current_timestamp,
   deleted timestamp with time zone default null,
   expired timestamp with time zone default null
-);
-
-create schema object;
-create table object.label(
-  id varchar(256) primary key not null check(id ~ '^[a-z][a-z0-9.]+$')
-);
-create table object.node(
-  id uuid primary key not null default uuid_generate_v4(),
-  label varchar(256) not null references object.label(id) on delete restrict on update cascade, 
-  property jsonb default null, 
-  created timestamp with time zone not null default current_timestamp,
-  deleted timestamp with time zone default null
-);
-create table object.edge(
-  id uuid primary key not null default uuid_generate_v4(),
-  label varchar(256) not null references object.label(id) on delete restrict on update cascade,
-  property jsonb default null, 
-  "from" uuid not null references object.node(id) on delete cascade on update cascade,
-  "to" uuid not null references object.node(id) on delete cascade on update cascade
 );
