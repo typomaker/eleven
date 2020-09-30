@@ -16,24 +16,6 @@ export class World<T extends object> implements Container<Component<T>> {
   private systems = new Set<System<T>>();
 
   constructor(...systems: System<T>[]) {
-    this.enable(new class extends System<T> {
-      async update(world: World<T>): Promise<void> {
-        for (let [id, component] of world.state.future) {
-          if (!component) {
-            world.state.current.delete(id)
-          } else {
-            if (world.state.current.has(id)) component = Object.assign(world.state.current.get(id), component)
-            component = Component.cleanup(component);
-            world.state.current.set(id, component)
-          }
-          for (const system of world.systems) {
-            if (!system.queries) continue;
-            for (const query of Object.values(system.queries)) query.set(id, component)
-          }
-        }
-        world.state.future.clear()
-      }
-    }());
     for (const system of systems) this.enable(system)
   }
 
@@ -45,9 +27,26 @@ export class World<T extends object> implements Container<Component<T>> {
     this.systems.delete(system);
   }
 
+  private async actualize() {
+    for (let [id, component] of this.state.future) {
+      if (!component) {
+        this.state.current.delete(id)
+      } else {
+        if (this.state.current.has(id)) component = Object.assign(this.state.current.get(id), component)
+        component = Component.cleanup(component);
+        this.state.current.set(id, component)
+      }
+      for (const system of this.systems) {
+        if (system.queries) for (const query of Object.values(system.queries)) query.set(id, component)
+      }
+    }
+    this.state.future.clear()
+  }
+
   public async update() {
     if (this.state.tick.time > 0) this.state.tick.delta = performance.now() - this.state.tick.time
     this.state.tick.time = performance.now();
+    await this.actualize();
     for (const system of this.systems) {
       await system.update(this);
     }
@@ -66,8 +65,15 @@ export class World<T extends object> implements Container<Component<T>> {
   }
 
   public set(id: string, component: Component<T> | undefined) {
-    if (component) component = { ...this.state.current.get(id), ...this.state.future.get(id), ...component }
-    this.state.future.set(id, component)
+    if (component) {
+      if (this.state.future.has(id)) {
+        Object.assign(this.state.future.get(id), component)
+      } else {
+        this.state.future.set(id, { ...component });
+      }
+    } else {
+      this.state.future.set(id, undefined)
+    }
   }
 
   public get(id: string): Readonly<Component<T>> | undefined {

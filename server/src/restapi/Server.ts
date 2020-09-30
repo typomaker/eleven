@@ -2,15 +2,15 @@ import cors from "@koa/cors";
 import Koa from "koa";
 import bodyParser from "koa-bodyparser";
 import koaJson from "koa-json";
-import { Application } from "../service";
-import Logger from "../service/Logger";
+import * as app from "../app";
+import Logger from "../app/Logger";
 import Router from "./Router";
 
 export class Server {
   public readonly koa = new Koa();
   private readonly router = new Router(this.app);
   private readonly logger: Logger
-  constructor(private readonly app: Application) {
+  constructor(private readonly app: app.Container) {
     this.logger = app.logger.wrap(Server.name)
     this.koa.on('error', (err) => {
       this.logger.error(Server, err)

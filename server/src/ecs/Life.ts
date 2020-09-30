@@ -24,5 +24,18 @@ export class Life<T extends object> {
   public stop() {
     this.started = false;
   }
+
+  *[Symbol.asyncIterator]() {
+    while (this.started) {
+      const begin = performance.now();
+      let promise = Promise.resolve();
+      promise = promise.then(() => this.world.update())
+      promise = promise.then(() => new Promise((ok) => {
+        const wait = this.delay - (performance.now() - begin);
+        wait > 0 ? setTimeout(ok, wait) : ok()
+      }));
+      yield promise.then(() => begin);
+    }
+  }
 }
 export default Life;

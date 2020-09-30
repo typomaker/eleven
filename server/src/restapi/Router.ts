@@ -1,12 +1,12 @@
 import KoaRouter from "@koa/router";
 import { Context } from "koa";
-import { Application } from "../service";
-import Logger from "../service/Logger";
+import * as app from "../app";
+import Logger from "../app/Logger";
 import * as data from "./data";
 
 export class Router extends KoaRouter {
   private readonly logger: Logger;
-  constructor(private readonly app: Application) {
+  constructor(private readonly app: app.Container) {
     super({ strict: true })
     this.logger = this.app.logger.wrap(Router.name)
 

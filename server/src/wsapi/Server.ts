@@ -1,10 +1,10 @@
 import WS from "ws";
-import Application from "../service/Application";
+import Container from "../app/Container";
 
 export class Server {
   public readonly ws: WS.Server;
   private logger = this.app.logger.wrap("wsapi")
-  constructor(private readonly app: Application) {
+  constructor(private readonly app: Container) {
     this.ws = new WS.Server({ server: app.server });
 
     this.ws.on("connection", (ws, req) => {

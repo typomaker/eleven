@@ -1,4 +1,4 @@
-class Logger {
+export class Logger {
   private tags = "";
   constructor(protected readonly verbose = false) { }
   public async log(...message: any[]) {
@@ -29,6 +29,6 @@ class Logger {
     return l;
   }
 }
-namespace Logger { }
+export namespace Logger { }
 
 export default Logger;

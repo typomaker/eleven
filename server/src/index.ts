@@ -1,7 +1,7 @@
-import Application from "./service/Application";
+import * as app from "./app";
 import env from "./utility/env";
 
-const app = new Application.Cluster({
+const main = new app.Process({
   env: (process.env.ENV as any) || "production",
   domain: env.string("DOMAIN"),
   password: {
@@ -22,5 +22,5 @@ const app = new Application.Cluster({
     uri: `mongodb://${env.string("MONGO_INITDB_ROOT_USERNAME")}:${env.string("MONGO_INITDB_ROOT_PASSWORD")}@mongodb:27017`,
   }
 });
-app.start().catch((err) => console.error(err));
+main.start().catch((err) => console.error(err));
 
