@@ -1,7 +1,8 @@
 {
-  "delay": 10,
-  "watch": "./dist",
+  "delay": 100,
+  "watch": "src",
+  "ext": "js,ts,json",
   "execMap": {
-    "js": "node --harmony --inspect=0.0.0.0"
+    "js": "npm run build && node --harmony --inspect=0.0.0.0"
   }
 }
