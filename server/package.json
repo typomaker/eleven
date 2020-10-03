@@ -4,7 +4,7 @@
   "description": "",
   "main": "dist/index.js",
   "scripts": {
-    "start": "node  --harmony ./dist/index.js",
+    "start": "node --harmony ./dist/index.js",
     "watch": "nodemon",
     "build": "npx tsc"
   },
