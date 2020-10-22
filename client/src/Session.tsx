@@ -1,79 +1,87 @@
-import React, { useState, useContext } from "react"
-import WSocket from "./WSocket";
-import store from "store";
-import Http from "./Http";
+import React from "react"
+import WebSocket from "./WebSocket";
+import store, { namespace } from "store";
+import Configuration from "./Configuration";
 
-abstract class Session {
-  public readonly value: Session.Value
-
-  constructor(private readonly http: Http, value: Session.Value) {
-    this.value = { ...store.get("session"), value };
-  }
-  public async signin(data: Http.Session.Create.Request): Promise<void> {
-    const session = await this.http.session.create(data);
-    this.setValue({ ...this.value, user: session })
-    store.set("session", { ...this.value, user: session });
-  }
-  public async signout(): Promise<void> {
-    await this.http.session.delete()
-    this.setValue({ ...this.value, user: undefined })
-    store.remove("session");
-  }
-  public abstract setValue(value: Session.Value): void;
+interface Session {
+  id: string | null;
+  error?: string
 }
 namespace Session {
-  export type Value = {
-    user?: {
-      readonly id: string
-      readonly expired?: string
-      readonly user: {
-        readonly id: string
-        readonly name: string
-        readonly avatar?: string
+  export type Dispatch = (action: Action) => void
+  export type Action = (
+    | Action.Signin
+    | Action.Signout
+  );
+  export namespace Action {
+    export interface Signin {
+      type: 'signin',
+      payload: (
+        | Signin.Facebook
+        | Signin.Password
+      )
+    }
+    export namespace Signin {
+      export interface Facebook {
+        type: 'fb',
+        token: string
       }
+      export interface Password {
+        type: 'pw',
+        email: string
+        password: string
+        recaptcha2: string
+      }
+    }
+    export interface Signout {
+      type: 'signout'
     }
   }
 
-  export const Context = React.createContext<Session>(undefined as any as Session);
+  const Context = React.createContext<[Session, React.Dispatch<Action>] | undefined>(undefined);
   Context.displayName = "Session";
 
+  export const useContext = () => {
+    const context = React.useContext(Context);
+    if (!context) throw new Error('context not defined')
+    return context;
+  };
   export const Consumer = Context.Consumer;
-
   export const Provider: React.FunctionComponent = ({ children }) => {
-    const http = useContext(Http.Context);
-
-    const [value, setValue] = useState<Value>({});
-
+    const configuration = React.useContext(Configuration.Context);
+    const [session, setSession] = React.useState<Session>({ id: null });
+    const dispatch = React.useCallback<Dispatch>(async (action: Action) => {
+      switch (action.type) {
+        case 'signin': {
+          console.debug(`[${Context.displayName}] dispatch ${JSON.stringify(action)}`)
+          const response = await fetch(`${configuration.http}/sign`, { method: 'POST', body: JSON.stringify(action.payload), headers: { 'Content-Type': 'application/json' } })
+          if (response.ok) {
+            const json = await response.json();
+            setSession({ id: json.id })
+          } else {
+            const json = await response.json();
+            setSession(prev => ({ ...prev, error: json.message }))
+          }
+          break;
+        }
+        case 'signout': {
+          const response = await fetch(`${configuration.http}/sign`, { method: 'DELETE', headers: { 'Content-Type': 'application/json', 'Authorization': session.id! } })
+          if (response.ok) {
+            setSession({ id: null })
+          } else {
+            const json = await response.json();
+            setSession(prev => ({ ...prev, error: json.message }))
+          }
+          break;
+        }
+      }
+    }, [session])
+    const value = React.useMemo<[Session, React.Dispatch<Action>]>(() => [session, dispatch], [session])
     return (
-      <Context.Provider value={new class extends Session { setValue = setValue }(http, value)}>
+      <Context.Provider value={value}>
         {children}
       </Context.Provider>
     )
-  }
-
-  type Account = null | {
-    id: string
-    avatar: string | null
-    name: string
-  }
-
-  export namespace Account {
-    export const Context = React.createContext<Account>(null);
-    Context.displayName = "Session.Account";
-    export const Consumer = Context.Consumer;
-    export const Provider: React.FunctionComponent = ({ children }) => {
-      const [value, setValue] = useState<Account>(null);
-      WSocket.useMessage((msg: WSocket.Message) => {
-        if (msg.type === "session.account") {
-          setValue(msg.payload);
-        }
-      })
-      return (
-        <Context.Provider value={value}>
-          {children}
-        </Context.Provider>
-      )
-    }
   }
 }
 

@@ -1,3 +1,4 @@
+
 export class Logger {
   private tags = "";
   constructor(protected readonly verbose = false) { }
@@ -21,7 +22,11 @@ export class Logger {
     return Promise.resolve().then(() => console.debug(`[debug]${this.tags} ${this.stringify(message)}`))
   }
   private stringify(message: any[]) {
-    return message.map((v) => typeof v === "string" ? v : JSON.stringify(v, undefined, 1)?.replace(/\n\s?/g, "") ?? v).join(" ")
+    return message.map((v) => {
+      if (typeof v === "string") return v;
+      if (v instanceof Error) return v.stack ?? v.message;
+      return JSON.stringify(v, undefined, 1)?.replace(/\n\s*/g, "") ?? v
+    }).filter(Boolean).join(" ")
   }
   public wrap(...tag: string[]) {
     const l = new Logger(this.verbose);

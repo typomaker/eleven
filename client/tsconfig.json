@@ -9,7 +9,8 @@
     "esModuleInterop": true,
     "strictNullChecks": true,
     "strict": true,
-    "incremental": true
+    "incremental": true,
+    "importsNotUsedAsValues": "preserve"
   },
   "include": [
     "./src/**/*"

@@ -1,29 +1,22 @@
-import React, { useState } from "react";
+import React from "react";
 
-interface Configuration {
-    readonly http: string
-    readonly ws: string
-    set: (value: Omit<Configuration, "set">) => void
+type Configuration = {
+    http: string
+    ws: string
 }
-
 namespace Configuration {
-    const initial = {
+    export const initial = {
         http: "https://server." + process.env.DOMAIN!,
-        ws: "wss://server." + process.env.DOMAIN!,
-        set: () => { }
+        ws: "wss://server." + process.env.DOMAIN!
     }
     export const Context = React.createContext<Configuration>(initial);
     Context.displayName = "Configuration";
-
+    export const useContext = () => React.useContext(Context);
     export const Consumer = Context.Consumer;
     export const Provider: React.FunctionComponent = ({ children }) => {
-        const [value, setValue] = useState<Configuration>({
-            ...initial,
-            set: (v) => setValue({ ...value, ...v })
-        });
-
+        const [configuration, setConfiguration] = React.useState<Configuration>(initial);
         return (
-            <Context.Provider value={value}>
+            <Context.Provider value={configuration}>
                 {children}
             </Context.Provider>
         )

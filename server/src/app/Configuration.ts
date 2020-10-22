@@ -1,7 +1,8 @@
+import minio from "minio";
+import * as nats from "nats";
 import pg from "pg";
 import Recaptcha2 from "recaptcha2";
-import Password from "../account/Password";
-
+import Password from "./Password";
 export interface Configuration {
   env: "development" | "production"
   domain: string;
@@ -11,5 +12,10 @@ export interface Configuration {
   mongodb: {
     uri: string
   }
+  minio: minio.ClientOptions,
+  session: {
+    ttl: number
+  }
+  nats: nats.ConnectionOptions
 }
 export default Configuration

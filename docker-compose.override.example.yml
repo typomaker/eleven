@@ -13,14 +13,14 @@ services:
       - ./client:/client:delegated
     env_file:
       - .env
-  postgres:
-    volumes:
-      - ./postgres/data:/var/lib/postgresql/data:rw
-      - ./postgres/initdb.d/:/docker-entrypoint-initdb.d/
-    ports:
-      - 5432:5432
-    env_file:
-      - .env
+  # postgres:
+  #   volumes:
+  #     - ./postgres/data:/var/lib/postgresql/data:rw
+  #     - ./postgres/initdb.d/:/docker-entrypoint-initdb.d/
+  #   ports:
+  #     - 5432:5432
+  #   env_file:
+  #     - .env
   mongodb:
     volumes:
       - ./mongodb/data:/data/db
@@ -35,3 +35,15 @@ services:
       - ./nginx/ssl:/ssl:rw
       - ./nginx/conf.d/:/conf.d/:ro
       - ./nginx/entrypoint.sh:/entrypoint.sh:ro
+  minio:
+    env_file: 
+      - .env
+    volumes: 
+      - ./minio/data:/data
+    ports: 
+      - 9000:9000
+  nats:
+    env_file: 
+      - .env
+    volumes: 
+      - ./nats/main.conf:/main.conf

@@ -1,6 +1,3 @@
-export * from "./Email";
+export * as entity from "./entity";
 export * from "./Service";
-export * from "./Sign";
-export * from "./Token";
-export * from "./User";
 

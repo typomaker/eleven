@@ -1,7 +1,7 @@
 import * as app from "./app";
 import env from "./utility/env";
 
-const main = new app.Process({
+app.Process.new({
   env: (process.env.ENV as any) || "production",
   domain: env.string("DOMAIN"),
   password: {
@@ -20,7 +20,21 @@ const main = new app.Process({
   },
   mongodb: {
     uri: `mongodb://${env.string("MONGO_INITDB_ROOT_USERNAME")}:${env.string("MONGO_INITDB_ROOT_PASSWORD")}@mongodb:27017`,
+  },
+  minio: {
+    accessKey: env.string('MINIO_ACCESS_KEY'),
+    secretKey: env.string('MINIO_SECRET_KEY'),
+    endPoint: 'minio',
+    useSSL: false,
+    port: 9000
+  },
+  session: {
+    ttl: env.integer('SESSION_TTL', 600000)
+  },
+  nats: {
+    servers: 'nats://nats:4222',
+    token: env.string('NATS_TOKEN'),
+    timeout: 120000,
   }
-});
-main.start().catch((err) => console.error(err));
+}).catch((err) => console.error(err));
 

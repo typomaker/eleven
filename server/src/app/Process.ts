@@ -31,11 +31,12 @@ export class Process {
     });
   }
 
-  public async start() {
-    if (this.config.env !== "development" && cluster.isMaster) {
-      this.fork()
+  public static async new(config: Configuration) {
+    const process = new Process(config);
+    if (process.config.env !== "development" && cluster.isMaster) {
+      process.fork()
     } else {
-      return new Container(this.config).load();
+      return Container.new(process.config);
     }
   }
 }

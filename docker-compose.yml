@@ -2,24 +2,43 @@ version: '3.7'
 
 services:
   server:
+    restart: unless-stopped
     build:
       context: server
-    restart: unless-stopped
-  postgres:
-    build:
-      context: postgres
-    restart: unless-stopped
+    depends_on: 
+      - mongodb
+      - minio
+      - nats
+  # postgres:
+  #   build:
+  #     context: postgres
+  #   restart: unless-stopped
   mongodb:
+    restart: unless-stopped
     build:
       context: mongodb
     restart: unless-stopped
   client:
+    restart: unless-stopped
     build:
       context: client
+    depends_on: 
+      - server
   nginx:
     restart: unless-stopped
     build:
       context: nginx
+    depends_on: 
+      - server
+      - client
     ports:
       - 80:80
       - 443:443
+  minio:
+    restart: unless-stopped
+    build: 
+      context: minio
+  nats:
+    restart: unless-stopped
+    build: 
+      context: nats

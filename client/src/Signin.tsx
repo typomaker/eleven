@@ -57,38 +57,35 @@ const useStyles = makeStyles((theme: Theme) => createStyles({
 const recaptchaRef = React.createRef<ReCaptcha>();
 
 export default function Signin() {
-    const localization = useContext(Localization.Context);
-    const session = useContext(Session.Context);
+    const translate = Localization.useTranslator();
+    const [session, sessionDispatch] = Session.useContext();
 
     const classes = useStyles({});
     const [email, setEmail] = useState({ value: '', error: '' });
     const [password, setPassword] = useState({ value: '', error: '', visible: false });
     const [recaptcha2, setRecaptcha2] = useState({ value: '', checked: false, error: '' });
 
-    function switchPasswordVisibility() {
+    function onSwitchedPasswordVisibility() {
         setPassword(prev => ({ ...prev, visible: !prev.visible }));
     };
-    function onConfirm() {
-        return () => {
-            if (validate()) {
-                session.signin({ type: "password", password: password.value, email: email.value, recaptcha2: recaptcha2.value })
-            }
+    async function onConfirm() {
+        if (validate()) {
+            sessionDispatch({ type: 'signin', payload: { type: 'pw', password: password.value, email: email.value, recaptcha2: recaptcha2.value } })
         }
     }
-    function onLogin() {
-        return (token: string) => {
-            session.signin({ type: "facebook", token })
-        }
+    function onFacebokLogin(token: string) {
+        console.debug(`[Signin] facebook ${token}`)
+        sessionDispatch({ type: 'signin', payload: { type: 'fb', token } })
     }
-    function emailChange(event: React.ChangeEvent<HTMLInputElement>) {
+    function onEmailChange(event: React.ChangeEvent<HTMLInputElement>) {
         const value = event.target.value
         setEmail(prev => ({ ...prev, value, error: '' }));
     }
-    function passwordChange(event: React.ChangeEvent<HTMLInputElement>) {
+    function onPasswordChange(event: React.ChangeEvent<HTMLInputElement>) {
         const value = event.target.value
         setPassword(prev => ({ ...prev, value, error: '' }));
     }
-    function recaptcha2Change(event: React.ChangeEvent<{}>, checked: boolean): void {
+    function onRecaptcha2Change(event: React.ChangeEvent<{}>, checked: boolean): void {
         const target = event.target as HTMLInputElement
         if (target.checked) {
             recaptchaRef.current!.execute();
@@ -97,10 +94,10 @@ export default function Signin() {
         }
         setRecaptcha2({ checked: target.checked, error: '', value: '' });
     };
-    function recaptcha2Confirmed(token: string | null): void {
+    function onRecaptcha2Verified(token: string | null): void {
         setRecaptcha2({
             value: token ?? "",
-            checked: true,
+            checked: token !== null,
             error: "",
         });
     };
@@ -109,19 +106,17 @@ export default function Signin() {
     }
     function validate() {
         let valid = true;
-        if (validator.isEmpty(email.value)) {
-            setEmail({ ...email, error: "Введите email" })
-        } else if (!validator.isEmail(email.value)) {
+        if (validator.isEmpty(email.value) || !validator.isEmail(email.value)) {
             valid = false;
-            setEmail({ ...email, error: "Введите корректный email" })
+            setEmail({ ...email, error: 'ui@invalidEmail' })
         }
         if (validator.isEmpty(password.value)) {
             valid = false;
-            setPassword({ ...password, error: "Придумайте пароль" })
+            setPassword({ ...password, error: 'ui@invalidPassword' })
         }
         if (validator.isEmpty(recaptcha2.value)) {
             valid = false;
-            setRecaptcha2({ ...recaptcha2, error: "Подтвердите что вы не робот" })
+            setRecaptcha2({ ...recaptcha2, error: 'ui@invalidRecaptcha2' })
         }
         return valid;
     }
@@ -137,32 +132,32 @@ export default function Signin() {
                     <TextField
                         fullWidth
                         autoFocus
-                        label={localization.t?.email}
+                        label={translate('ui@email')}
                         name={"email"}
                         value={email.value}
-                        onChange={emailChange}
+                        onChange={onEmailChange}
                         margin="normal"
-                        helperText={email.error}
+                        helperText={translate(email.error)}
                         error={!!email.error}
                         autoComplete={"off"}
                     />
                     <TextField
-                        label={localization.t?.password}
+                        label={translate('ui@password')}
                         name={"password"}
                         type={password.visible ? 'text' : 'password'}
                         value={password.value}
-                        onChange={passwordChange}
+                        onChange={onPasswordChange}
                         autoComplete="current-password"
                         margin="normal"
                         fullWidth
-                        helperText={password.error}
+                        helperText={translate(password.error)}
                         error={!!password.error}
                         InputProps={{
                             endAdornment: (
                                 <InputAdornment position="end">
                                     <IconButton
                                         aria-label="Toggle password visibility"
-                                        onClick={switchPasswordVisibility}
+                                        onClick={onSwitchedPasswordVisibility}
                                     >
                                         {password.visible ? <Visibility /> : <VisibilityOff />}
                                     </IconButton>
@@ -174,11 +169,12 @@ export default function Signin() {
                         ref={recaptchaRef}
                         sitekey="6LeionsUAAAAAD_73sJcZxlSa3PhivXpJY25KGhL"
                         size={'invisible'}
-                        onChange={recaptcha2Confirmed}
+                        onChange={onRecaptcha2Verified}
+                        theme={'dark'}
                     />
                     <FormControl required error={!!recaptcha2.error} margin={"normal"}>
                         <FormControlLabel
-                            onChange={recaptcha2Change}
+                            onChange={onRecaptcha2Change}
                             name={"reCaptchaChecked"}
                             control={<Checkbox
                                 color="primary"
@@ -188,11 +184,13 @@ export default function Signin() {
                                         : undefined
                                 }
                             />}
-                            label={localization.t.imNotARobot}
+                            label={translate('ui@imNotARobot')}
                             checked={recaptcha2.value !== '' && recaptcha2.checked}
                         />
                         <FormHelperText>{recaptcha2.error}</FormHelperText>
                     </FormControl>
+
+
                     <Slide direction="up" in mountOnEnter unmountOnExit>
                         <div>
                             <Button
@@ -201,12 +199,12 @@ export default function Signin() {
                                 variant="contained"
                                 color="primary"
                                 className={classes.submit}
-                                onClick={onConfirm()}
+                                onClick={onConfirm}
                                 disabled={email.value === "" || password.value === "" || recaptcha2.value === ""}
                             >
-                                {localization.t.signin}
+                                {translate('ui@signin')}
                             </Button>
-                            <Facebook appId={process.env.FACEBOOK_ID!} onLogin={onLogin()} onFailure={onFailure} />
+                            <Facebook appId={process.env.FACEBOOK_ID!} onLogin={onFacebokLogin} onFailure={onFailure} />
                         </div>
                     </Slide>
                 </form>

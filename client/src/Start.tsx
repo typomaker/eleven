@@ -28,7 +28,7 @@ export const Start: React.FunctionComponent = () => {
       <Grid container direction={'row'} spacing={1} alignItems={'stretch'} justify={'center'} className={classes.container} >
         <Grid item md={3}>
           <Paper className={classes.paper} elevation={1}>
-
+            <Entity.Start />
           </Paper>
         </Grid>
         <Grid item md={3}>

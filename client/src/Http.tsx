@@ -16,6 +16,22 @@ abstract class Http {
 
   public abstract setValue(value: Http.Value): void;
 
+  public create(
+    path: '/sign/',
+    request: { id: string } & (
+      | { type: "fb", token: string }
+      | { type: "pw", password: string, recaptcha2: string, email: string }
+    )
+  ): Promise<void>
+  public async create(path: any, request: any): Promise<any> {
+    const result = await fetch(`${this.#value.host}/sign/`, {
+      method: "POST",
+      headers: this.headers,
+      body: JSON.stringify(request)
+    });
+    return this.result(result)
+  }
+
   public readonly session = new class Session {
     constructor(private readonly Http: Http) { }
 
@@ -63,8 +79,8 @@ namespace Http {
   }
   export namespace Session.Create {
     export type Request = Readonly<(
-      | { type: "facebook", token: string }
-      | { type: "password", password: string, recaptcha2: string, email: string }
+      | { type: "fb", token: string }
+      | { type: "pw", password: string, recaptcha2: string, email: string }
     )>
     export type Response = Session
   }

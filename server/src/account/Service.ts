@@ -1,110 +1,168 @@
 import axios from "axios";
+import * as uuid from "uuid";
+import { entity } from ".";
 import Container from "../app/Container";
-import Email from "./Email";
-import Password from "./Password";
-import Sign from "./Sign";
-import Token from "./Token";
-import User from "./User";
+import Repository from "./Repository";
 
-type Signin = (
-  & { ip?: string }
-  & (
-    | { type: "facebook", token: string }
-    | { type: "password", password: string, recaptcha2: string, email: string }
-  )
-)
 export class Service {
-  public readonly password = new Password(this.app.config.password)
-  constructor(private readonly app: Container) { }
+  private readonly log = this.app.logger.wrap(Service.name);
+  public readonly repository = new Repository(this.app.mongodb);
+  constructor(public readonly app: Container) { }
 
-  private async recaptcha(token: string) {
-    try {
-      this.app.logger.info("[Recatpcha2]", token);
-      await this.app.recaptcha2.validate(token);
-    } catch (e) {
-      this.app.logger.debug("[Recaptcha2]", this.app.recaptcha2.translateErrors(e));
-      throw new Service.Exception("CaptchaInvalid");
-    }
-  }
-
-  public async signin(value: Signin): Promise<Token> {
-    let token: Token;
-
-    switch (value.type) {
-      case "password": {
-        this.recaptcha(value.recaptcha2)
-        let user = await this.app.storage.account.user.finder.filter(["=", "emails", ["=", "address", value.email]]).one();
-        if (!user) {
-          user = new User({ name: value.email.split("@")[0] });
-          user.emails.push(new Email({ address: value.email, user }))
-          user.signs.push(new Sign({ type: "password", data: await this.password.hash(value.password), user }))
-        }
-        const sign = user.signs.find((sign) => sign.type === "password");
-        if (!sign) throw new Service.Exception("SignNotExist");
-        if (!await this.password.compare(value.password, sign.data)) throw new Service.Exception("InvalidPassword");
-
-        await this.app.storage.account.user.save(user);
-        token = new Token({ user: sign.user, sign, ip: value.ip });
-        break;
+  private readonly authenticate = new class {
+    constructor(private readonly self: Service) { }
+    public async password(arg: { password: string, recaptcha2: string, email: string }) {
+      try {
+        await this.self.app.recaptcha2.validate(arg.recaptcha2);
+      } catch (e) {
+        throw new Service.Error.Captcha(this.self.app.recaptcha2.translateErrors(e));
       }
-      case "facebook": {
-        const fb = await axios.get(`https://graph.facebook.com/v4.0/me`, { params: { access_token: value.token, fields: "id,email,name" } });
-        let user = await this.app.storage.account.user.finder.filter(["=", "signs", ["&", [["=", "type", "facebook"], ["=", "data", fb.data.id]]]]).one();
-        if (!user) {
-          user = new User({ name: fb.data.name || fb.data.email?.split("@")[0] });
-          if (fb.data.email) {
-            user = (await this.app.storage.account.user.finder.filter(["=", "emails", ["=", "address", fb.data.email]]).one()) ?? user;
-          }
-        }
 
-        let email = user.emails.find((email) => email.address === fb.data.email);
-        if (fb.data.email && !email) {
-          email = new Email({ address: fb.data.email, confirmed: new Date(), user })
-          user.emails.push(email);
-        }
-        if (email?.isConfirmed === false) throw new Service.Exception("EmailUnconfirmed");
-
-        let sign = user.signs.find((sign) => sign.type === "facebook" && sign.data === fb.data.id);
-        if (!sign) {
-          sign = new Sign({ type: "facebook", user, data: fb.data.id });
-          user.signs.push(sign);
-        }
-
-        await this.app.storage.account.user.save(user);
-        token = new Token({ user, sign, ip: value.ip });
-        break;
+      let user = await this.self.repository.user.get(['=', 'email', arg.email])
+      if (!user) {
+        user = {
+          id: uuid.v4(),
+          name: arg.email.split("@")[0],
+          created: new Date(),
+          email: [{ address: arg.email }],
+          sign: [{ type: "pw", data: await this.self.app.password.hash(arg.password) }]
+        };
       }
-      default: throw new Service.Exception("Invalid");
+      const sign = user.sign.find((v) => v.type === "pw");
+      if (!sign) throw new Service.Error.ShouldBeAnotherSign();
+      if (!await this.self.app.password.compare(arg.password, sign.data)) throw new Service.Error.InvalidPassword();
+
+      await this.self.repository.user.save(user);
+      return user;
     }
 
-    await this.app.storage.account.token.save(token);
+    public async facebook(arg: { token: string }) {
+      const fb = await axios.get(`https://graph.facebook.com/v4.0/me`, { params: { access_token: arg.token, fields: "id,email,name" } });
+      let user = await this.self.repository.user.get(['=', 'sign', 'fb', fb.data.id])
+      if (!user && fb.data.email) {
+        user = await this.self.repository.user.get(['=', 'email', fb.data.email]);
+      }
+      if (!user) {
+        user = {
+          id: uuid.v4(),
+          name: fb.data.name || fb.data.email?.split("@")[0],
+          created: new Date(),
+          email: [],
+          sign: [{ type: "fb", data: fb.data.id }]
+        };
+      }
+      let email = user.email?.find((email) => email.address === fb.data.email);
+      if (fb.data.email && !email) {
+        email = { address: fb.data.email, confirmed: new Date() };
+        user.email.push(email)
+      }
+      if (!email?.confirmed) throw new Service.Error.EmailNotConfirmed();
+
+      const sign = user.sign.find((v) => v.type === "fb" && v.data === fb.data.id);
+      if (!sign) {
+        user.sign.push({ type: "fb", data: fb.data.id });
+      }
+      await this.self.repository.user.save(user);
+      return user;
+    }
+  }(this)
+
+  public async signin(arg: ({ type: 'fb' } & Parameters<Service['authenticate']['facebook']>[0]) | ({ type: 'pw' } & Parameters<Service['authenticate']['password']>[0])): Promise<entity.Session> {
+    let user: entity.User;
+    switch (arg.type) {
+      case 'fb': user = await this.authenticate.facebook(arg); break;
+      case 'pw': user = await this.authenticate.password(arg); break;
+    }
+
+    for await (const session of this.repository.session.find(['&', [['=', 'user', user.id], ['=', 'expired', false]]])) {
+      session.expired = new Date();
+      await this.repository.session.save(session);
+    }
+
+    const expiration = new Date();
+    expiration.setTime(Date.now() + this.app.config.session.ttl)
+    const session: entity.Session = { user, created: new Date(), expired: expiration, id: uuid.v4() };
+    await this.repository.session.save(session);
+    return session;
+  }
+
+  public async signout(id: string): Promise<entity.Session> {
+    const token = await this.repository.session.get(id);
+    if (!token) throw new Service.Error.TokenNotFound();
+    token.expired = new Date();
+    this.repository.session.save(token);
     return token;
   }
 
-  public async signout(value: { id: string }): Promise<Token> {
-    const token = await this.app.storage.account.token.finder.filter(["=", "id", value.id]).one();
-    if (!token) throw new Service.Exception("NotExist");
-    await this.app.storage.account.token.delete(token);
-    return token;
+  public async authorize(id: string) {
+    const session = await this.repository.session.get(id);
+    if (!session) throw new Service.Error.TokenNotFound();
+    if (session.expired.getTime() < Date.now()) throw new Service.Error.TokenExpired();
+    const timeLeft = session.expired.getTime() - Date.now()
+    if (timeLeft < this.app.config.session.ttl / 3) {
+      session.expired.setTime(Date.now() + this.app.config.session.ttl)
+      await this.repository.session.save(session)
+      this.log.debug(`session ${id} ttl extended`)
+    }
+    return session;
   }
 
-  public async authorize(value: { id: string }): Promise<Token> {
-    let token = await this.app.storage.account.token.finder.filter(["=", "id", value.id]).one();
-    if (!token) throw new Service.Exception("NotExist");
-    if (token.isExpired) {
-      if (!token.isDeleted) await this.app.storage.account.token.delete(token);
-      throw new Service.Exception("Expired");
-    }
-    if (token.isDeleted) {
-      token = new Token({ user: token.user, ip: token.ip });
-      await this.app.storage.account.token.save(token);
-    }
-    return token;
+  public async user(id: string) {
+    const user = await this.repository.user.get(id);
+    if (!user) throw new Service.Error.UserNotFound();
+    return user;
   }
 
 }
 export namespace Service {
-  export class Exception extends Error { }
+  export abstract class Error extends globalThis.Error { }
+  export namespace Error {
+    export class Captcha extends Error {
+      constructor(message: string) {
+        super(`${Captcha.name} : ${message}`)
+      }
+    }
+    export class ShouldBeAnotherSign extends Error {
+      constructor() {
+        super(ShouldBeAnotherSign.name)
+      }
+    }
+    export class SignNotFound extends Error {
+      constructor() {
+        super(SignNotFound.name)
+      }
+    }
+    export class TokenExpired extends Error {
+      constructor() {
+        super(TokenExpired.name)
+      }
+    }
+    export class TokenConflict extends Error {
+      constructor() {
+        super(TokenConflict.name)
+      }
+    }
+    export class TokenNotFound extends Error {
+      constructor() {
+        super(TokenNotFound.name)
+      }
+    }
+    export class InvalidPassword extends Error {
+      constructor() {
+        super(InvalidPassword.name)
+      }
+    }
+    export class EmailNotConfirmed extends Error {
+      constructor() {
+        super(EmailNotConfirmed.name)
+      }
+    }
+    export class UserNotFound extends Error {
+      constructor() {
+        super(UserNotFound.name)
+      }
+    }
+  }
 }
 
 export default Service;
