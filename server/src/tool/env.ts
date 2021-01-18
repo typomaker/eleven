@@ -13,7 +13,11 @@ export function integer(name: string, def?: number): number {
   if (Number.isNaN(v)) return fallback(def)
   return v;
 }
-
+export function float(name: string, def?: number): number {
+  const v = parseFloat(process.env[name]!);
+  if (Number.isNaN(v)) return fallback(def)
+  return v;
+}
 export default {
   string,
   integer,

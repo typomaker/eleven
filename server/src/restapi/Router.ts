@@ -29,12 +29,6 @@ export class Router extends KoaRouter {
         ctx.status = 205;
       }
     });
-    this.post('/sign/character', this.authorize(), async (ctx: KoaRouter.RouterContext<{ session: account.entity.Session }>) => {
-      const body = ctx.request.body;
-      if (!request.Character.is(body)) return ctx.throw(400);
-      const character = await this.app.game.create({ type: 'character', name: body.name, icon: body.icon, account: ctx.state.session.user.id })
-      ctx.body = response.Entity.create(character);
-    })
     this.get("/localization", async (ctx: KoaRouter.RouterContext) => {
       const languages = await this.app.mongodb.db('localization').collection('language').find().toArray();
       const result: { [K: string]: string } = {};

@@ -1,7 +1,7 @@
 export function string(v: any): v is string {
   return typeof v === "string"
 }
-export function array(v: any): v is Array<any> {
+export function array(v: any): v is any[] {
   return Array.isArray(v);
 }
 export function number(v: any): v is number {
@@ -10,8 +10,9 @@ export function number(v: any): v is number {
 export function boolean(v: any): v is boolean {
   return typeof v === "boolean";
 }
-export function empty(v: any): v is object {
-  return v && Object.keys(v).length === null
+export function empty(v: object | undefined): v is object;
+export function empty(v: any): boolean {
+  return v && Object.keys(v).length === 0
 }
 
 export default {
@@ -19,4 +20,5 @@ export default {
   array,
   number,
   boolean,
+  empty,
 }

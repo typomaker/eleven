@@ -17,5 +17,9 @@ export interface Configuration {
     ttl: number
   }
   nats: nats.ConnectionOptions
+  game: {
+    frameRate: number
+  },
+  port: number,
 }
 export default Configuration

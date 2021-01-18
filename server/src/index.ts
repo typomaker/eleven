@@ -1,5 +1,5 @@
 import * as app from "./app";
-import env from "./utility/env";
+import env from "./tool/env";
 
 app.Process.new({
   env: (process.env.ENV as any) || "production",
@@ -35,6 +35,10 @@ app.Process.new({
     servers: 'nats://nats:4222',
     token: env.string('NATS_TOKEN'),
     timeout: 120000,
-  }
+  },
+  game: {
+    frameRate: env.integer('GAME_FRAME_RATE', 60)
+  },
+  port: env.integer('PORT', 80),
 }).catch((err) => console.error(err));
 

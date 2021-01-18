@@ -16,6 +16,7 @@
     "no-console": false,
     "max-line-length": false,
     "ban-types": false,
+    "no-angle-bracket-type-assertion": false,
     "curly": [
       true,
       "ignore-same-line"

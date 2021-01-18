@@ -7,6 +7,9 @@ import Repository from "./Repository";
 export class Service {
   private readonly log = this.app.logger.wrap(Service.name);
   public readonly repository = new Repository(this.app.mongodb);
+  public readonly user = new Map<string, entity.User>();
+  public readonly session = new Map<string, entity.Session>();
+
   constructor(public readonly app: Container) { }
 
   private readonly authenticate = new class {
@@ -83,36 +86,39 @@ export class Service {
     expiration.setTime(Date.now() + this.app.config.session.ttl)
     const session: entity.Session = { user, created: new Date(), expired: expiration, id: uuid.v4() };
     await this.repository.session.save(session);
+    this.session.set(session.id, session);
+    this.user.set(session.user.id, session.user);
     return session;
   }
 
   public async signout(id: string): Promise<entity.Session> {
-    const token = await this.repository.session.get(id);
-    if (!token) throw new Service.Error.TokenNotFound();
-    token.expired = new Date();
-    this.repository.session.save(token);
-    return token;
+    const session = await this.repository.session.get(id);
+    if (!session) throw new Service.Error.TokenNotFound();
+    session.expired = new Date();
+    this.repository.session.save(session);
+    this.session.delete(session.id);
+    this.user.delete(session.user.id);
+    return session;
   }
 
   public async authorize(id: string) {
-    const session = await this.repository.session.get(id);
+    const session = this.session.get(id) ?? await this.repository.session.get(id);
     if (!session) throw new Service.Error.TokenNotFound();
-    if (session.expired.getTime() < Date.now()) throw new Service.Error.TokenExpired();
+    if (session.expired.getTime() < Date.now()) {
+      this.session.delete(session.id);
+      this.user.delete(session.user.id);
+      throw new Service.Error.TokenExpired();
+    };
     const timeLeft = session.expired.getTime() - Date.now()
     if (timeLeft < this.app.config.session.ttl / 3) {
       session.expired.setTime(Date.now() + this.app.config.session.ttl)
       await this.repository.session.save(session)
       this.log.debug(`session ${id} ttl extended`)
     }
+    this.session.set(session.id, session);
+    this.user.set(session.user.id, session.user);
     return session;
   }
-
-  public async user(id: string) {
-    const user = await this.repository.user.get(id);
-    if (!user) throw new Service.Error.UserNotFound();
-    return user;
-  }
-
 }
 export namespace Service {
   export abstract class Error extends globalThis.Error { }

@@ -32,6 +32,7 @@ export const Start: React.FunctionComponent = () => {
 
   const translate = Localization.useTranslator();
   const configuration = Configuration.useContext();
+  const sender = WebSocket.useSender();
   const [session] = Session.useContext();
   const [edit, setEdit] = React.useState(false)
   const [name, setName] = React.useState<{ value?: string, error?: string }>({ value: '' })
@@ -43,14 +44,7 @@ export const Start: React.FunctionComponent = () => {
       setName({ ...name, error: 'ui@invalidCharacterName' });
       return
     }
-    const character = await fetch(`${configuration.http}/sign/character`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': session.id! },
-      body: JSON.stringify({
-        name: name.value,
-        icon: icon.value,
-      })
-    })
+    sender({ type: 'create:character', name: name.value, icon: icon.value, })
   }
   const onNameChange: React.ChangeEventHandler<HTMLInputElement> = function (e) {
     const value = e.target.value

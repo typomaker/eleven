@@ -15,6 +15,6 @@
 		"window.zoomLevel": 0,
 		"explorer.autoReveal": false,
 		"problems.autoReveal": false,
-		"typescript.tsdk": "node_modules/typescript/lib"
+		"typescript.tsdk": "server/node_modules/typescript/lib"
 	}
 }

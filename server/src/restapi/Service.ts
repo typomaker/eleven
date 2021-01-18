@@ -36,6 +36,6 @@ export class Service {
     this.koa.use(this.router.routes());
     this.koa.use(this.router.allowedMethods());
 
-    this.app.server.addListener("request", this.koa.callback())
+    this.app.server.on("request", this.koa.callback())
   }
 }

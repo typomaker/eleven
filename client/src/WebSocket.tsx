@@ -1,6 +1,7 @@
 import React from "react"
 import Configuration from "./Configuration";
 import Session from "./Session";
+import Game from './Game';
 
 export namespace WebSocket {
   export const Context = React.createContext<globalThis.WebSocket | undefined>(undefined);
@@ -13,7 +14,7 @@ export namespace WebSocket {
     const [ws, setWs] = React.useState<globalThis.WebSocket | undefined>()
     React.useEffect(() => {
       if (!session.id) return;
-      const url = `${configuration.ws}?token=${session.id}`;
+      const url = `${configuration.ws}/game?token=${session.id}`;
       const ws = (function connect() {
         console.debug(`[${Context.displayName}][${session.id}] connect`);
         const ws = new globalThis.WebSocket(url);
@@ -53,7 +54,7 @@ export namespace WebSocket {
       </Context.Provider>
     )
   }
-  export const useListener = function (cb: (msg: Message) => void) {
+  export const useListener = function (cb: (msg: Action) => void) {
     const ws = useContext();
     React.useEffect(() => {
       if (!ws) return;
@@ -65,7 +66,7 @@ export namespace WebSocket {
 
   export const useSender = function () {
     const ws = useContext();
-    return (msg: Message) => {
+    return (msg: Action) => {
       if (!ws) return;
       const data = JSON.stringify(msg);
       if (ws.readyState === globalThis.WebSocket.OPEN) ws.send(data)
@@ -73,64 +74,18 @@ export namespace WebSocket {
     }
   }
 
-  export type Message = (
-    | Message.Authorization
-    | Message.Session
-    | Message.Account.Character.Create
-    | Message.Account.Character.List
-  )
-
-  export namespace Message {
-    export type Authorization = (
-      | Authorization.Facebook
-      | Authorization.Password
-    )
-    export namespace Authorization {
-      export interface Facebook {
-        t: 1,
-        token: string
-      }
-      export interface Password {
-        t: 2,
-        email: string
-        password: string
-        recaptcha2: string
-      }
+  export type Action = (
+    | Action.Entity
+    | Action.State
+  );
+  export namespace Action {
+    export type Entity = {
+      type: 'entity',
+      entity: Partial<Game.Entity>
     }
-    export interface Session {
-      t: 3
-      id: string
-    }
-    export interface Exit {
-      t: 4
-    }
-    export namespace Account {
-      export namespace Character {
-        export type Create = {
-          t: 5
-          name: string
-          icon?: string
-        }
-        export type List = {
-          t: 6
-        }
-      }
-    }
-    export namespace Localization {
-      export type Language = {
-        t: 7,
-        name: string
-      }
-      export type Variant = {
-        t: 8
-        names: string[]
-      }
-      export type Disctionary = {
-        t: 9
-        words: {
-          [T: string]: string
-        }
-      }
+    export type State = {
+      type: 'state'
+      state: Game.State
     }
   }
 }
