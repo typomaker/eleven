@@ -1,19 +1,27 @@
 {
   "compilerOptions": {
     "preserveWatchOutput": true,
-    "module": "commonjs",
+    "module": "esnext",
     "outDir": "./dist",
     "esModuleInterop": true,
-    "target": "ES2019",
+    "target": "es2019",
     "lib": [
       "es2019"
     ],
     "noImplicitAny": true,
     "moduleResolution": "node",
+    "forceConsistentCasingInFileNames": true,
+    "allowSyntheticDefaultImports": true,
     "sourceMap": true,
     "strictNullChecks": true,
     "strict": true,
-    "incremental": true
+    "incremental": true,
+    "baseUrl": "./",
+    "paths": {
+      "src/*": [
+        "./src/*"
+      ],
+    }
   },
   "include": [
     "./src/**/*"

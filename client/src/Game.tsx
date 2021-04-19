@@ -1,6 +1,6 @@
 import React from 'react';
 import WebSocket from "./WebSocket";
-import Start from "./Start";
+import * as Page from "./Page/Start";
 
 
 export function Game() {
@@ -10,7 +10,7 @@ export function Game() {
   // })
   return (
     <WebSocket.Provider>
-      <Start />
+      <Page.Start />
     </WebSocket.Provider>
   )
 }

@@ -1,15 +1,23 @@
-import * as app from "../app";
-import * as ecsq from '../ecsq';
+import * as account from "../account";
+import * as ecs from "../ecs";
+import * as env from "../env";
 import Entity from "./Entity";
-import WebSocket from "./WebSocket";
+import * as system from "./system";
 
-export class World extends ecsq.World<Entity> {
-  public readonly websocket = new WebSocket(this.app);
+export class World extends ecs.World<Entity> {
+  public readonly user = new Map<account.entity.User["uuid"], account.entity.User>()
+  public readonly entity = new Map<Entity["id"], Entity>()
+  public readonly websocket = new system.WebSocket(this);
+  public readonly command = new system.Command(this);
+  public readonly debug = new system.Debug(this);
 
-  constructor(public readonly app: app.Container) {
-    super(1000 / app.config.game.frameRate);
-    this.enable(this.websocket);
+
+  constructor() {
+    super(1000 / env.game.frameRate)
+    this.attach(this.debug);
+    this.attach(this.websocket);
+    this.attach(this.command);
   }
 }
 
-export default World;
+export default World

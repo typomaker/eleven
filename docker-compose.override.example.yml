@@ -21,9 +21,9 @@ services:
   #     - 5432:5432
   #   env_file:
   #     - .env
-  mongodb:
+  mongo:
     volumes:
-      - ./mongodb/data:/data/db
+      - ./mongo/data:/data/db
     ports:
       - 27017:27017
     env_file: 

@@ -5,6 +5,7 @@ import ListItem from '@material-ui/core/ListItem';
 import ListItemSecondaryAction from '@material-ui/core/ListItemSecondaryAction';
 import ListItemText from '@material-ui/core/ListItemText';
 import ListItemAvatar from '@material-ui/core/ListItemAvatar';
+import Divider from '@material-ui/core/Divider';
 import Checkbox from '@material-ui/core/Checkbox';
 import Avatar from './Avatar';
 
@@ -18,10 +19,10 @@ export const List: React.FunctionComponent = ({ children }) => {
   const classes = useStyles();
   return (
     <MUList dense >
-      {[0, 1, 2, 3].map((value) => {
+      {[0, 1].map((value) => {
         const labelId = `checkbox-list-secondary-label-${value}`;
         return (
-          <ListItem key={value} button>
+          <ListItem key={value} button divider>
             <ListItemAvatar>
               <Avatar />
             </ListItemAvatar>

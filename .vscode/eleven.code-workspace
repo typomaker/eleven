@@ -1,13 +1,17 @@
 {
 	"folders": [
 		{
+			"path": "..",
+			"name": "root"
+		},
+		{
 			"path": "../server"
 		},
 		{
 			"path": "../client"
 		},
 		{
-			"path": ".."
+			"path": "../mongo"
 		}
 	],
 	"settings": {

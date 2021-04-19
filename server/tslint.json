@@ -7,7 +7,7 @@
   "rules": {
     "member-access": false,
     "member-ordering": false,
-    "arrow-parens": true,
+    "arrow-parens": false,
     "no-namespace": false,
     "no-shadowed-variable": false,
     "interface-name": false,
@@ -17,10 +17,20 @@
     "max-line-length": false,
     "ban-types": false,
     "no-angle-bracket-type-assertion": false,
+    "array-type": false,
+    "no-empty": false,
     "curly": [
       true,
       "ignore-same-line"
-    ]
+    ],
+    "ordered-imports": true,
+    "quotemark": {
+      "severity": "default",
+      "options": [
+        "double"
+      ]
+    },
+    "semicolon": false
   },
   "rulesDirectory": []
 }

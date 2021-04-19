@@ -6,17 +6,17 @@ services:
     build:
       context: server
     depends_on: 
-      - mongodb
+      - mongo
       - minio
       - nats
   # postgres:
   #   build:
   #     context: postgres
   #   restart: unless-stopped
-  mongodb:
+  mongo:
     restart: unless-stopped
     build:
-      context: mongodb
+      context: mongo
     restart: unless-stopped
   client:
     restart: unless-stopped

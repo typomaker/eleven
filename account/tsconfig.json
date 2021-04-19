@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "preserveWatchOutput": true,
+    "module": "commonjs",
+    "outDir": "./dist",
+    "esModuleInterop": true,
+    "target": "ES2019",
+    "lib": [
+      "es2019"
+    ],
+    "noImplicitAny": true,
+    "moduleResolution": "node",
+    "sourceMap": true,
+    "strictNullChecks": true,
+    "strict": true,
+    "incremental": true
+  },
+  "include": [
+    "./src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
+}

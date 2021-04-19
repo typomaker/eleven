@@ -4,7 +4,7 @@ import store, { namespace } from "store";
 import Configuration from "./Configuration";
 
 interface Session {
-  id: string | null;
+  uuid: string | null;
   error?: string
 }
 namespace Session {
@@ -49,7 +49,7 @@ namespace Session {
   export const Consumer = Context.Consumer;
   export const Provider: React.FunctionComponent = ({ children }) => {
     const configuration = React.useContext(Configuration.Context);
-    const [session, setSession] = React.useState<Session>({ id: null });
+    const [session, setSession] = React.useState<Session>({ uuid: null });
     const dispatch = React.useCallback<Dispatch>(async (action: Action) => {
       switch (action.type) {
         case 'signin': {
@@ -57,7 +57,7 @@ namespace Session {
           const response = await fetch(`${configuration.http}/sign`, { method: 'POST', body: JSON.stringify(action.payload), headers: { 'Content-Type': 'application/json' } })
           if (response.ok) {
             const json = await response.json();
-            setSession({ id: json.id })
+            setSession({ uuid: json.uuid })
           } else {
             const json = await response.json();
             setSession(prev => ({ ...prev, error: json.message }))
@@ -65,9 +65,9 @@ namespace Session {
           break;
         }
         case 'signout': {
-          const response = await fetch(`${configuration.http}/sign`, { method: 'DELETE', headers: { 'Content-Type': 'application/json', 'Authorization': session.id! } })
+          const response = await fetch(`${configuration.http}/sign`, { method: 'DELETE', headers: { 'Content-Type': 'application/json', 'Authorization': session.uuid! } })
           if (response.ok) {
-            setSession({ id: null })
+            setSession({ uuid: null })
           } else {
             const json = await response.json();
             setSession(prev => ({ ...prev, error: json.message }))

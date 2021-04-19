@@ -3,6 +3,6 @@
   "watch": "src",
   "ext": "js,ts,json",
   "execMap": {
-    "js": "npm run build && node --harmony --inspect=0.0.0.0"
+    "js": "npm run build && node --harmony --es-module-specifier-resolution=node --inspect=0.0.0.0"
   }
 }
